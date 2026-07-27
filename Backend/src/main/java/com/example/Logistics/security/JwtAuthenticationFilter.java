@@ -31,7 +31,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             String jwt = parseJwt(request);
 
-            // AGAR TOKEN NAHI HAI, TOH REQUEST AGE BHEJ KE YAHAN SE RETURN HO JAYEIN
             if (jwt == null) {
                 filterChain.doFilter(request, response);
                 return;
@@ -52,7 +51,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             System.out.println("Cannot set user authentication: " + e.getMessage());
         }
 
-        // Agar token valid tha aur try block bina return ke end tak aya, tab request age barhayein
         filterChain.doFilter(request, response);
     }
 

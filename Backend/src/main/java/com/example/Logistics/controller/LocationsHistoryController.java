@@ -18,11 +18,15 @@ public class LocationsHistoryController {
     private LocationsHistoryService locationsHistoryService;
 
     // Create Log
-    @PostMapping
-    public ResponseEntity<LocationsHistory> addLocationLog(@RequestBody LocationsHistory log) {
+   @PostMapping
+public ResponseEntity<?> addLocationLog(@RequestBody LocationsHistory log) {
+    try {
         LocationsHistory savedLog = locationsHistoryService.addLocationLog(log);
-        return ResponseEntity.ok().body(savedLog);
+        return ResponseEntity.ok(savedLog);
+    } catch (Exception e) {
+        return ResponseEntity.badRequest().body("Error: " + e.getMessage());
     }
+}
 
     // Read All (Unpaged List)
     @GetMapping("/all")

@@ -28,9 +28,11 @@ const DriverIncomingRequests = ({ userId, showNotification, viewMode }) => {
     }, [activeTrips]);
 
     // 💡 Robust Helper to extract trip ID properly from shipment object
+    // 💡 Safely extract primary Trip ID without fallbacking directly to shipment.id
     const getTripIdFromShipment = (shipment) => {
         if (!shipment) return null;
-        return shipment.trip_id || shipment.tripId || shipment.trip?.id || shipment.id || null;
+        // Strictly prioritize nested object or explicit trip_id fields
+        return shipment.trip?.id || shipment.trip_id || shipment.tripId || null;
     };
 
     const loadData = async () => {
@@ -106,10 +108,10 @@ const DriverIncomingRequests = ({ userId, showNotification, viewMode }) => {
 
         const startDynamicJourney = () => {
             let startCoords = { lat: 24.8607, lng: 67.0011 };
-            let targetCoords = { lat: 33.6844, lng: 73.0479 }; //islamabad if city is not in dictionary
+            let targetCoords = { lat: 33.6844, lng: 73.0479 }; // islamabad fallback
 
             const startCityName = currentTrip.sourceCity || 'Karachi';
-            const destCityName = currentTrip.deliveryCity || 'Islamabad';  //fallback
+            const destCityName = currentTrip.deliveryCity || 'Islamabad';  // fallback
 
             const cityCoordinates = {
                 // Major Metros & Capital
@@ -140,7 +142,7 @@ const DriverIncomingRequests = ({ userId, showNotification, viewMode }) => {
                 'sargodha': { lat: 32.0836, lng: 72.6711 },
                 'bahawalpur': { lat: 29.3544, lng: 71.6911 },
                 'rahim yar khan': { lat: 28.4212, lng: 70.2989 },
-                'rahimyar khan': { lat: 28.4212, lng: 70.2989 }, // Alias for safety
+                'rahimyar khan': { lat: 28.4212, lng: 70.2989 },
                 'okara': { lat: 30.8100, lng: 73.4597 },
                 'jhelum': { lat: 32.9405, lng: 73.7276 },
                 'gujrat': { lat: 32.5742, lng: 74.0754 },
@@ -184,21 +186,26 @@ const DriverIncomingRequests = ({ userId, showNotification, viewMode }) => {
                     currentPos.lng = targetCoords.lng;
                 }
 
-                // 📍 Dynamic Location string calculated via Geofence Helper
-                const dynamicLocationName = getReadableLocation(currentPos.lat, currentPos.lng, destCityName);
+                const dynamicLocationName = getReadableLocation(currentPos.lat, currentPos.lng, destCityName) || `En Route to ${destCityName}`;
 
-                // 🚨 PAYLOAD POSTING TO BACKEND
+                // 🕒 Standard ISO Format (Matches Spring Boot LocalDateTime ISO Parse)
+                // 🕒 Space formatted date string (Matches yyyy-MM-dd HH:mm:ss)
+                const formattedNow = new Date().toISOString().replace('T', ' ').split('.')[0];
+
+                // 📦 Standard Spring Boot Entity Payload
                 const payload = {
                     latitude: Number(currentPos.lat.toFixed(4)),
                     longitude: Number(currentPos.lng.toFixed(4)),
-                    location: dynamicLocationName, // 👈 Human-readable string ("At Hyderabad", "Near Moro Highway", etc.)
-                    timestamp: new Date().toISOString(),
-                    trip: { id: Number(validTripId) }
+                    location: String(dynamicLocationName),
+                    timestamp: new Date().toISOString(), // Standard ISO String ("2026-07-23T16:40:00.000Z")
+                    trip: {
+                        id: Number(validTripId)
+                    }
                 };
 
                 try {
                     await locationService.pushLiveLocation(payload);
-                    console.log(`📡 GPS Ping sent for Trip #${validTripId}:`, payload.location, payload.latitude, payload.longitude);
+                    console.log(`📡 GPS Ping sent for Trip #${validTripId}:`, payload.location);
                 } catch (err) {
                     console.error("❌ Location simulation ping failed:", err);
                 }
@@ -207,13 +214,17 @@ const DriverIncomingRequests = ({ userId, showNotification, viewMode }) => {
                 if (Math.abs(currentPos.lat - targetCoords.lat) < 0.001 && Math.abs(currentPos.lng - targetCoords.lng) < 0.001) {
                     clearInterval(simulationRef.current);
 
-                    // 🎯 Final Completion Ping in Database
+                    // 🕒 Space formatted date string (Matches yyyy-MM-dd HH:mm:ss)
+                    const formattedArrivalNow = new Date().toISOString().replace('T', ' ').split('.')[0];
+
                     const finalPayload = {
                         latitude: Number(targetCoords.lat.toFixed(4)),
                         longitude: Number(targetCoords.lng.toFixed(4)),
-                        location: `Arrived at Destination (${destCityName})`, // 👈 Destination arrival mark
-                        timestamp: new Date().toISOString(),
-                        trip: { id: Number(validTripId) }
+                        location: `Arrived at Destination (${destCityName})`,
+                        timestamp: new Date().toISOString(), // Standard ISO String
+                        trip: {
+                            id: Number(validTripId)
+                        }
                     };
 
                     try {
@@ -256,7 +267,6 @@ const DriverIncomingRequests = ({ userId, showNotification, viewMode }) => {
 
     // 📍 Geofence Helper to map Lat/Lng to Human Readable Locations
     const getReadableLocation = (lat, lng, destCityName) => {
-        // 1. City Bounding Boxes / Near Detection (Threshold ~ 0.25 degrees / ~25km)
         const CITIES = [
             { name: 'Karachi', lat: 24.8607, lng: 67.0011 },
             { name: 'Hyderabad', lat: 25.3960, lng: 68.3578 },
@@ -274,7 +284,6 @@ const DriverIncomingRequests = ({ userId, showNotification, viewMode }) => {
             const latDiff = Math.abs(lat - city.lat);
             const lngDiff = Math.abs(lng - city.lng);
 
-            // Close proximity to a city center (~15-20km range)
             if (latDiff < 0.15 && lngDiff < 0.15) {
                 if (city.name.toLowerCase() === destCityName.toLowerCase()) {
                     return `Arrived at Destination (${city.name})`;
@@ -282,13 +291,11 @@ const DriverIncomingRequests = ({ userId, showNotification, viewMode }) => {
                 return `At ${city.name}`;
             }
 
-            // Near outer bounds of a city (~35km range)
             if (latDiff < 0.35 && lngDiff < 0.35) {
                 return `Near ${city.name} Highway`;
             }
         }
 
-        // Default Fallback when travelling between major waypoints
         return `En Route to ${destCityName}`;
     };
 

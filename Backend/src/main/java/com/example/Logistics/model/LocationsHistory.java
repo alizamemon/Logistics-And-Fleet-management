@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import java.time.LocalDateTime;
+import com.fasterxml.jackson.annotation.JsonFormat; // 👈 Import this
 
 @Entity
 @Table(name = "locations_history")
@@ -25,10 +26,11 @@ public class LocationsHistory {
 
     private String location;
 
-    @Column(name = "timestamp")
-    private LocalDateTime timestamp = LocalDateTime.now();
+  // Space wala pattern accept karega
+@JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss") 
+@Column(name = "timestamp")
+private LocalDateTime timestamp = LocalDateTime.now();
 
-    // Many-to-One: Ek bade truck ke trip mein hazaron bar coordinates generate honge
     @ManyToOne
     @JoinColumn(name = "trip_id", nullable = false)
     private Trip trip;

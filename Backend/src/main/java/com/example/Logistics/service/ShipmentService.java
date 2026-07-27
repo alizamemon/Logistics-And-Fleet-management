@@ -42,7 +42,7 @@ public class ShipmentService {
 
     // Create
     public Shipment createShipment(Shipment shipment) {
-        String trackingNumber = "TRK-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        String trackingNumber = "TRK-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();   // universally unique identifier = 128 bit 
         shipment.setTrackingNumber(trackingNumber);
         shipment.setStatus("PENDING");
         shipment.setCreatedAt(LocalDateTime.now());
@@ -68,32 +68,30 @@ public class ShipmentService {
         return shipmentRepository.findById(id);
     }
 
-    // 🎯 FIX: Cascading Update across Shipment, TripShipment, Trip, Driver & Vehicle
     @Transactional
     public Shipment updateShipmentStatus(long id, String newStatus) {
     Shipment existingShipment = shipmentRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Shipment not found with id: " + id));
 
-    existingShipment.setStatus(newStatus);
+    existingShipment.setStatus(newStatus);  //delivered
 
     // Tracking log entry
     ShipmentTrackingLog trackingLog = new ShipmentTrackingLog();
-    trackingLog.setShipment(existingShipment);
+    trackingLog.setShipment(existingShipment); //shipment_tracking_log table -> shipment_id
     trackingLog.setTimestamp(LocalDateTime.now());
-    trackingLog.setLocationCity(existingShipment.getDeliveryCity() != null ? existingShipment.getDeliveryCity() : "In Transit");
+    trackingLog.setLocationCity(existingShipment.getDeliveryCity() != null ? existingShipment.getDeliveryCity() : "City Not Found");
 
-    if ("DELIVERED".equalsIgnoreCase(newStatus)) {
+    if ("DELIVERED".equalsIgnoreCase(newStatus)) {    
         existingShipment.setDeliveredAt(LocalDateTime.now());
         trackingLog.setStatusActivity("Parcel successfully delivered to destination.");
 
-        // 1. Safe Optional handling for TripShipment
-        Optional<TripShipment> tripShipmentOpt = tripShipmentRepository.findByShipmentId(id);
+        Optional<TripShipment> tripShipmentOpt = tripShipmentRepository.findByShipmentId(id);            
         if (tripShipmentOpt.isPresent()) {
             TripShipment tripShipment = tripShipmentOpt.get();
             tripShipment.setDeliveryStatus("DELIVERED");
             tripShipmentRepository.save(tripShipment);
 
-            // 2. Fetch Parent Trip & Mark Complete
+            // Fetch Parent Trip & Mark Complete
             Trip trip = tripShipment.getTrip();
             if (trip != null) {
                 trip.setStatus("COMPLETED");
@@ -140,7 +138,7 @@ public class ShipmentService {
                 .orElseThrow(() -> new RuntimeException("Shipment not found with ID: " + shipmentId));
 
         Driver firstDriver = driverRepository.findFirstByStatus("AVAILABLE")
-                .orElseThrow(() -> new RuntimeException("Abhi koi driver available nahi hai!"));
+                .orElseThrow(() -> new RuntimeException("No available driver found!"));
 
         shipment.setDriver(firstDriver);
         shipment.setStatus("ASSIGNED_PENDING_ACCEPTANCE");
@@ -165,7 +163,7 @@ public class ShipmentService {
         Driver driver = driverRepository.findByUserId(userId)
                 .orElseThrow(() -> new RuntimeException("Driver profile not found"));
 
-        Vehicle vehicle = vehicleRepository.findSuitableAvailableVehicle(shipment.getWeight())
+        Vehicle vehicle = vehicleRepository.findSuitableAvailableVehicle(shipment.getWeight())   //acc to weight assign vehicle
                 .orElseThrow(() -> new RuntimeException("No available vehicle found!"));
 
         driver.setStatus("ON_TRIP");
@@ -175,26 +173,32 @@ public class ShipmentService {
         shipment.setDispatchedAt(LocalDateTime.now());
 
         driverRepository.saveAndFlush(driver);
-        vehicleRepository.saveAndFlush(vehicle);
-        Shipment savedShipment = shipmentRepository.saveAndFlush(shipment);
+        vehicleRepository.saveAndFlush(vehicle);  //save() -> just saves in memory, flush() -> forces db for instant update commit
 
+        // 1. Create & Save the Trip First
         Trip newTrip = new Trip();
         newTrip.setTripNumber("TRP-" + System.currentTimeMillis());
         newTrip.setDriver(driver);
         newTrip.setVehicle(vehicle);
         newTrip.setSourceCity("Karachi Hub");
-        newTrip.setDestinationCity(savedShipment.getDeliveryCity());
+        newTrip.setDestinationCity(shipment.getDeliveryCity());
         newTrip.setStatus("ACTIVE");
         newTrip.setStartDate(LocalDateTime.now());
         Trip savedTrip = tripRepository.saveAndFlush(newTrip);
 
+        // Link the Trip directly to Shipment
+        shipment.setTrip(savedTrip);
+        Shipment savedShipment = shipmentRepository.saveAndFlush(shipment);
+
+        // 3. Save TripShipment junction record
         TripShipment tripShipment = new TripShipment();
-        tripShipment.setTrip(savedTrip);
-        tripShipment.setShipment(savedShipment);
+        tripShipment.setTrip(savedTrip); //trip_shipment table -> trip_id
+        tripShipment.setShipment(savedShipment);  //trip_shipment table -> shipment_id
         tripShipment.setLoadedAt(LocalDateTime.now());
         tripShipment.setDeliveryStatus("ON_GOING");
         tripShipmentRepository.saveAndFlush(tripShipment);
 
+        // 4. Create Tracking Log
         ShipmentTrackingLog textLog = new ShipmentTrackingLog();
         textLog.setShipment(savedShipment);
         textLog.setLocationCity("Karachi Central Hub");
@@ -204,7 +208,6 @@ public class ShipmentService {
 
         return savedShipment;
     }
-
     // Decline Logic
     public Shipment declineShipment(Long shipmentId) {
         Shipment shipment = shipmentRepository.findById(shipmentId)

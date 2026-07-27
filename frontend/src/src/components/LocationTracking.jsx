@@ -46,19 +46,52 @@ const destinationIcon = L.divIcon({
     iconAnchor: [16, 16]
 });
 
-// City Lat/Lng lookup dictionary
+// 📍 City Lat/Lng lookup dictionary (100% Synchronized with Driver Incoming Simulation)
 const CITY_COORDINATES = {
+    // Major Metros & Capital
     'karachi': [24.8607, 67.0011],
     'lahore': [31.5204, 74.3587],
-    'sahiwal': [30.6682, 73.1014],
     'islamabad': [33.6844, 73.0479],
     'rawalpindi': [33.5651, 73.0169],
-    'khairpur': [27.5295, 68.7592],
-    'multan': [30.1575, 71.5249],
     'faisalabad': [31.4504, 73.1350],
-    'hyderabad': [25.3960, 68.3578],
+    'multan': [30.1575, 71.5249],
     'peshawar': [34.0151, 71.5249],
-    'quetta': [30.1798, 66.9750]
+    'quetta': [30.1798, 66.9750],
+
+    // Sindh Hubs & Transit Points
+    'hyderabad': [25.3960, 68.3578],
+    'khairpur': [27.5295, 68.7592],
+    'sukkur': [27.7052, 68.8574],
+    'moro': [26.6667, 68.0000],
+    'nawabshah': [26.2483, 68.4096],
+    'larkana': [27.5589, 68.2120],
+    'mirpurkhas': [25.5269, 69.0111],
+    'badin': [24.6559, 68.8383],
+    'ghotki': [28.0044, 69.3162],
+
+    // Punjab Hubs & Corridor Points
+    'sahiwal': [30.6682, 73.1014],
+    'gujranwala': [32.1617, 74.1883],
+    'sialkot': [32.4945, 74.5229],
+    'sargodha': [32.0836, 72.6711],
+    'bahawalpur': [29.3544, 71.6911],
+    'rahim yar khan': [28.4212, 70.2989],
+    'rahimyar khan': [28.4212, 70.2989],
+    'okara': [30.8100, 73.4597],
+    'jhelum': [32.9405, 73.7276],
+    'gujrat': [32.5742, 74.0754],
+
+    // KPK & Northern Points
+    'mardan': [34.1986, 72.0404],
+    'abbottabad': [34.1688, 73.2215],
+    'swat': [35.2227, 72.4258],
+    'mingora': [34.7717, 72.3600],
+    'nowshera': [34.0153, 71.9747],
+
+    // Balochistan Points
+    'gwadar': [25.1264, 62.3225],
+    'hub': [24.9018, 66.8833],
+    'khuzdar': [27.8164, 66.6057]
 };
 
 // 📍 Smooth Pan Helper: Only Pans if location actually changed
@@ -89,7 +122,7 @@ const LocationTracking = ({ tripId, destinationCity = "" }) => {
 
     const cleanCityName = (destinationCity || '').toLowerCase().trim();
 
-    // Dynamic destination resolution with fallback to Islamabad
+    // Dynamic destination resolution matching driver simulation
     const destinationCoords = CITY_COORDINATES[cleanCityName] || CITY_COORDINATES['islamabad'];
 
     const fetchLocationHistory = async () => {

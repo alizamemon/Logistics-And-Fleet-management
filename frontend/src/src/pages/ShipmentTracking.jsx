@@ -338,7 +338,7 @@ const ShipmentTracking = () => {
 
             {/* Footer */}
             <footer className="relative z-10 w-full border-t border-slate-900/60 bg-slate-950/90 backdrop-blur-md py-3 text-center text-[9px] text-slate-600 shrink-0">
-                &copy; {new Date().getFullYear()} LogixCore Systems. All operations protected under standard payload cryptography.
+                &copy; {new Date().getFullYear()} LogixCore Systems
             </footer>
         </div>
     );

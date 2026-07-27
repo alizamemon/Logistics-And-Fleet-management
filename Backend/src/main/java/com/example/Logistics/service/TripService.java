@@ -31,15 +31,15 @@ public class TripService {
     @Autowired
     private MaintenanceLogRepository maintenanceLogRepository;
 
-    // 🎯 ADD THIS: Auto-link Shipment with Trips
+    // Auto-link Shipment with Trips
     @Autowired
     private ShipmentRepository shipmentRepository;
 
     // 1. Create Trip (With Shipment Linkage)
     @Transactional
     public Trip createTrip(Trip trip) {
-        boolean hasVehicle = false;
-        boolean hasDriver = false;
+        boolean hasVehicle = false;   //tracking variable to check if a vehicle is assigned to the trip
+        boolean hasDriver = false;    //tracking variable to check if a driver is assigned to the trip
 
         // Validate Vehicle
         if (trip.getVehicle() != null && trip.getVehicle().getId() != null) {
@@ -91,7 +91,7 @@ public class TripService {
         // Save Trip first to generate ID
         Trip savedTrip = tripRepository.save(trip);
 
-        // 🔗 LINK PENDING SHIPMENTS TO THIS TRIP AUTOMATICALLY
+        // LINK PENDING SHIPMENTS TO THIS TRIP AUTOMATICALLY
         if (hasVehicle && hasDriver) {
             linkPendingShipmentsToTrip(savedTrip);
         }
@@ -99,7 +99,7 @@ public class TripService {
         return savedTrip;
     }
 
-    // Helper: Find & Link matching Shipments to Trip
+    // Find & Link matching Shipments to Trip
     private void linkPendingShipmentsToTrip(Trip trip) {
         if (trip.getDestinationCity() != null && trip.getDriver() != null) {
             List<Shipment> matchingShipments = shipmentRepository.findByDriverIdAndStatus(trip.getDriver().getId(), "PENDING");
@@ -146,11 +146,11 @@ public class TripService {
         Vehicle vehicle = trip.getVehicle();
         Driver driver = trip.getDriver();
 
-        // 🚨 AUTOMATIC MAINTENANCE ALERT LOGIC
+        // AUTOMATIC MAINTENANCE ALERT LOGIC
         if (vehicle != null) {
             long completedTripsCount = tripRepository.countByVehicleIdAndStatus(vehicle.getId(), "COMPLETED");
 
-            if (completedTripsCount > 0 && completedTripsCount % 5 == 0) { // Changed %1 to %5
+            if (completedTripsCount > 0 && completedTripsCount % 5 == 0) { 
                 vehicle.setStatus("IN_MAINTENANCE");
 
                 MaintenanceLog maintenanceLog = new MaintenanceLog();
@@ -208,7 +208,7 @@ public class TripService {
 
         Trip savedTrip = tripRepository.save(trip);
 
-        // 🔗 LINK SHIPMENTS TO THIS TRIP UPON ASSIGNMENT
+        // LINK SHIPMENTS TO THIS TRIP UPON ASSIGNMENT
         linkPendingShipmentsToTrip(savedTrip);
 
         return savedTrip;
