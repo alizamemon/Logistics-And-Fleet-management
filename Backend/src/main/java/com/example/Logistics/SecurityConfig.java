@@ -75,6 +75,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/vehicle/**").hasAnyAuthority("ADMIN", "EMPLOYEE")
                 .requestMatchers("/api/shipments/driver/**").hasAnyAuthority("DRIVER", "EMPLOYEE", "ADMIN", "ROLE_DRIVER", "ROLE_ADMIN")
 
+                .requestMatchers("/actuator/**").permitAll()
                 // 3. Authenticated Endpoints
                 .anyRequest().authenticated()
             );
