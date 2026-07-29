@@ -1,13 +1,23 @@
-import API from './api'; // 👈 Aapka banaya hua axios instance
+import API from './api';
 
 export const locationService = {
     /**
      * Sends live GPS simulation coordinate logs to the backend.
-     * @param {Object} locationPayload { latitude, longitude, timestamp, trip: { id } }
+     * @param {Object} locationPayload
      */
     pushLiveLocation: async (locationPayload) => {
         try {
-            const response = await API.post('/location-history', locationPayload);
+            // Safely extract trip ID from either nested object or flat field
+            const extractedTripId = locationPayload?.trip?.id || locationPayload?.tripId;
+
+            // Send BOTH formats so backend DTO accepts seamlessly on AWS
+            const safePayload = {
+                ...locationPayload,
+                tripId: extractedTripId ? Number(extractedTripId) : null,
+                trip: extractedTripId ? { id: Number(extractedTripId) } : locationPayload?.trip
+            };
+
+            const response = await API.post('/location-history', safePayload);
             return response.data;
         } catch (error) {
             console.error("Error pushing live coordinate inside locationService:", error);
