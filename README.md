@@ -46,7 +46,7 @@ The platform follows a layered production architecture designed for high availab
 |  |   * Cluster 3: Trip Manifests, Fuel Logs & Logistics Tables             |  |
 |  +-------------------------------------------------------------------------+  |
 +-------------------------------------------------------------------------------+
-
+```
 ---
 
 ## ✨ Features & Capabilities
