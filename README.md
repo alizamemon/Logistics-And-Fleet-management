@@ -89,7 +89,7 @@ The platform follows a layered production architecture designed for high availab
 | :--- | :--- |
 | **Frontend** | React.js, Vite, Tailwind CSS, Lucide Icons, Axios |
 | **Backend** | Java 17+, Spring Boot, Spring Security (JWT), Spring Data JPA, Hibernate |
-| **Database** | MySQL 8.0 (10 Relational Tables) |
+| **Database** | MySQL 8.0 (13 Relational Tables) |
 | **Web Server & Reverse Proxy** | NGINX, Systemd Services, Linux Security (chmod/chown) |
 | **DevOps & Cloud Deployment** | AWS EC2 (Ubuntu), GitHub Actions (Self-Hosted Runner), CI/CD |
 | **Build Tools & Utilities** | Maven (`pom.xml`), Git, Node.js (v20), MobaXterm, Postman |
