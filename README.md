@@ -150,7 +150,7 @@ Before you begin, ensure you have the following installed on your local machine:
 2. Create the primary database instance:
    ```sql
    CREATE DATABASE logistics_db;
-```
+
 ## ⚙️ 2. Backend Setup (Spring Boot)
 
 1.Navigate to the backend root directory:
