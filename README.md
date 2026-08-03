@@ -365,7 +365,6 @@ systemctl list-units --type=service --state=running
 # Monitor live CPU and RAM consumption on the server
 top
 ```
----
 
 ## ⚖️ Step 4.6: High-Availability & Load Balancer Integration (AWS ALB)
 
@@ -374,11 +373,14 @@ To achieve fault tolerance and multi-AZ resilience, the application is deployed 
 * **Multi-AZ Subnet Coverage:** ALB spans multiple Availability Zones (`us-east-1a`, `us-east-1b`, `us-east-1c`) for network redundancy.
 * **Target Group (`logistics-tg`):** Evaluates real-time health checks on registered EC2 instances (Port 80 HTTP probes). If any instance fails, traffic is automatically rerouted to healthy target nodes without downtime.
 * **Security Group Rules:** Security groups attached to ALB (HTTP 80 open to `0.0.0.0/0`) forward verified traffic to EC2 target instances.
+---
 
 ## 🔗 Live Access
 
 🌐 **Public IP EC2 Instance 1:** [http://98.81.233.145/](http://98.81.233.145/)
+
 🌐 **EC2 Instance Public IP**: http://3.84.121.200
+
 🖥️ Load Balancer DNS Entry (ALB): http://logistics-alb-1796139297.us-east-1.elb.amazonaws.com
 
 
