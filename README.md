@@ -1,8 +1,6 @@
 # 🚚 Logistics & Fleet Management System
 
-An enterprise-grade, full-stack logistics and fleet management platform engineered for real-time trip allocation, fuel tracking, vehicle maintenance scheduling, and secure role-based operational control (RBAC). 
-
-Built with a robust **Spring Boot** backend, **React** frontend, and **MySQL** database, features automated vehicle dispatching and audit logging, and is fully automated via a **GitHub Actions CI/CD pipeline** deployed on **AWS EC2** behind an **NGINX Reverse Proxy**.
+An enterprise-grade, full-stack logistics and fleet management platform engineered for real-time trip allocation, fuel tracking, vehicle maintenance scheduling, and secure role-based operational control (RBAC). Built with a robust **Spring Boot** backend, **React** frontend, and **MySQL** database, features automated vehicle dispatching and audit logging, and is fully automated via a **GitHub Actions CI/CD pipeline** deployed on **AWS EC2** behind an **NGINX Reverse Proxy**.
 ---
 
 ## 🏗️ System Architecture & Workflow
