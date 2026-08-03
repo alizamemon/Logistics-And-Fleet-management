@@ -203,13 +203,29 @@ This section details the step-by-step production setup on an **AWS EC2 Ubuntu In
 
 ---
 
-### 🌐 Step 4.1: Server Update & NGINX Installation
-Update the local package repositories and install NGINX web server,jdk, git and node:
+### 🌐 Step 4.1: Server Update, Package Installation & Code Cloning
+Update the local package repositories, install required dependencies, and clone the project repository:
 
 ```bash
-# Update Ubuntu package indexes and install
-sudo apt update
-sudo apt install -y openjdk-17-jdk nginx git
+# Update Ubuntu package indexes
+sudo apt update && sudo apt upgrade -y
+
+# Install OpenJDK 17, NGINX, Git, and essential utilities
+sudo apt install -y openjdk-17-jdk nginx git curl
+
+# Add NodeSource Node.js v20 repository and install Node.js & npm
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs
+
+# Verify all installed tools and system service versions
+java -version
+node -v
+npm -v
+git --version
+nginx -v
+
+# Clone the application repository to the server home directory
+git clone https://github.com/alizamemon/Logistics-And-Fleet-management.git
 
 # Verify NGINX is installed and actively running
 sudo systemctl status nginx
