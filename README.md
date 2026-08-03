@@ -352,6 +352,4 @@ top
 
 ## 🔗 Live Access
 
-[![Live Demo](https://img.shields.io/badge/Live_Demo-AWS_EC2-orange?style=for-the-badge&logo=amazon-aws)](http://98.81.233.145/)
-
 🌐 **Public IP:** [http://98.81.233.145/](http://98.81.233.145/)
