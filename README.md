@@ -2,7 +2,7 @@
 
 An enterprise-grade, full-stack logistics and fleet management platform engineered for real-time trip allocation, fuel tracking, vehicle maintenance scheduling, and secure role-based operational control (RBAC).
 
-Built with a robust **Spring Boot** backend, **React** frontend, and **MySQL** database, features automated vehicle dispatching and audit logging, and is fully automated via a **GitHub Actions CI/CD pipeline** deployed on **AWS EC2** behind an **NGINX Reverse Proxy**.
+Built with a robust Spring Boot backend, React frontend, and MySQL database, features automated vehicle dispatching and audit logging, and is fully automated via a GitHub Actions CI/CD pipeline deployed on AWS EC2 behind an AWS Application Load Balancer (ALB) and NGINX Reverse Proxy.
 
 ---
 
@@ -17,34 +17,34 @@ The platform follows a layered production architecture designed for high availab
 |                                FRONTEND TIER                                  |
 |   +-----------------------------------------------------------------------+   |
 |   |                  User Access Tiers (Web / Mobile)                     |   |
-|   |                      (React.js + Vite Engine)                          |   |
+|   |                      (React.js + Vite Engine)                         |   |
 |   +-----------------------------------------------------------------------+   |
 +-----------------------------------++------------------------------------------+
-                                    || HTTPS + Bearer JWT Tokens
+                                    || HTTPS / HTTP Requests
                                      v
 +-------------------------------------------------------------------------------+
 |                        AWS PRODUCTION CLOUD ENVIRONMENT                       |
 |                                                                               |
 |  +-------------------------------------------------------------------------+  |
-|  |                       Load Balancer (AWS ALB / Cloud)                   |  |
+|  |             AWS Application Load Balancer (ALB DNS Entry)               |  |
 |  +------------------------------------++-----------------------------------+  |
-|                                       ||                                      |
-|  +------------------------------------v----------------------------------+  |
-|  | Security Layer: NGINX Reverse Proxy & Static Web Host (/var/www/html)   |  |
-|  +------------------------------------++-----------------------------------+  |
-|                                       || Verified API Requests (/api/*)       |
-|  +------------------------------------v----------------------------------+  |
+|                                       || Spans Multi-AZ Subnets               |
+|            +--------------------------+--------------------------+            |
+|            |                                                     |            |
+|  +---------v---------------------------+               +---------v---------+  |
+|  | Subnet 1 (us-east-1a)               |               | Subnet 2 / 3      |  |
+|  | EC2 Node 1: NGINX + Spring Boot     |               | EC2 Node 2 (HA)   |  |
+|  +--------------------++---------------+               +-------------------+  |
+|                       || Verified API (/api/*)                                |
+|  +--------------------v----------------------------------------------------+  |
 |  | App Layer: Spring Boot Enterprise Core (Port 8080 - systemd Service)    |  |
 |  |   * REST Controllers (API Gateway & Web Security Filters)               |  |
 |  |   * Service Layer (Trip Allocation Logic, Fuel & Maintenance Engine)    |  |
 |  |   * Data Repositories (Spring Data JPA / Hibernate ORM)                 |  |
-|  +------------------------------------++-----------------------------------+  |
-|                                       || Secure DB Connections (Port 3306)    |
-|  +------------------------------------v----------------------------------+  |
-|  | Data Layer: AWS RDS (MySQL - 10 Relational Tables)                      |  |
-|  |   * Cluster 1: User, Authentication & IAM Role Tables                   |  |
-|  |   * Cluster 2: Fleet, Driver & Vehicle Management Tables                |  |
-|  |   * Cluster 3: Trip Manifests, Fuel Logs & Logistics Tables             |  |
+|  +--------------------++----------------------------------------------------+  |
+|                       || Secure DB Connections (Port 3306)                    |
+|  +--------------------v----------------------------------------------------+  |
+|  | Data Layer: AWS RDS (MySQL - Relational Tables)                         |  |
 |  +-------------------------------------------------------------------------+  |
 +-------------------------------------------------------------------------------+
 ```
@@ -86,13 +86,13 @@ The platform follows a layered production architecture designed for high availab
 
 ## 🛠️ Tech Stack & Tools
 
-| Layer | Technologies & Tools |
-| :--- | :--- |
+| Layer / Category | Technologies & Tools |
+|---|---|
 | **Frontend** | React.js, Vite, Tailwind CSS, Lucide Icons, Axios |
 | **Backend** | Java 17+, Spring Boot, Spring Security (JWT), Spring Data JPA, Hibernate |
-| **Database** | MySQL 8.0 (13 Relational Tables) |
-| **Web Server & Reverse Proxy** | NGINX, Systemd Services, Linux Security (chmod/chown) |
-| **DevOps & Cloud Deployment** | AWS EC2 (Ubuntu), GitHub Actions (Self-Hosted Runner), CI/CD |
+| **Database** | MySQL 8.0 (AWS RDS MySQL Instance) |
+| **Web Server & Reverse Proxy** | NGINX, Systemd Services, Linux Security |
+| **Cloud Infrastructure & DevOps** | AWS EC2 (Ubuntu), AWS Application Load Balancer (ALB), Target Groups, Multi-AZ Subnets |
 | **Build Tools & Utilities** | Maven (`pom.xml`), Git, Node.js (v20), MobaXterm, Postman |
 
 ---
@@ -367,6 +367,18 @@ top
 ```
 ---
 
+## ⚖️ Step 4.6: High-Availability & Load Balancer Integration (AWS ALB)
+
+To achieve fault tolerance and multi-AZ resilience, the application is deployed behind an AWS Application Load Balancer (ALB) distributing traffic across subnets:
+
+* **Multi-AZ Subnet Coverage:** ALB spans multiple Availability Zones (`us-east-1a`, `us-east-1b`, `us-east-1c`) for network redundancy.
+* **Target Group (`logistics-tg`):** Evaluates real-time health checks on registered EC2 instances (Port 80 HTTP probes). If any instance fails, traffic is automatically rerouted to healthy target nodes without downtime.
+* **Security Group Rules:** Security groups attached to ALB (HTTP 80 open to `0.0.0.0/0`) forward verified traffic to EC2 target instances.
+
 ## 🔗 Live Access
 
-🌐 **Public IP:** [http://98.81.233.145/](http://98.81.233.145/)
+🌐 **Public IP EC2 Instance 1:** [http://98.81.233.145/](http://98.81.233.145/)
+🌐 **EC2 Instance Public IP**: http://3.84.121.200
+🖥️ Load Balancer DNS Entry (ALB): http://logistics-alb-1796139297.us-east-1.elb.amazonaws.com
+
+
