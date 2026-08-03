@@ -204,11 +204,12 @@ This section details the step-by-step production setup on an **AWS EC2 Ubuntu In
 ---
 
 ### 🌐 Step 4.1: Server Update & NGINX Installation
-Update the local package repositories and install NGINX web server:
+Update the local package repositories and install NGINX web server,jdk, git and node:
 
 ```bash
-# Update Ubuntu package indexes and install NGINX
-sudo apt update && sudo apt install nginx -y
+# Update Ubuntu package indexes and install
+sudo apt update
+sudo apt install -y openjdk-17-jdk nginx git
 
 # Verify NGINX is installed and actively running
 sudo systemctl status nginx
