@@ -377,10 +377,6 @@ To achieve fault tolerance and multi-AZ resilience, the application is deployed 
 
 ## 🔗 Live Access
 
-🌐 **Public IP EC2 Instance 1:** [http://98.81.233.145/](http://98.81.233.145/)
-
-🌐 **EC2 Instance Public IP**: http://3.84.121.200
-
-🖥️ Load Balancer DNS Entry (ALB): http://logistics-alb-1796139297.us-east-1.elb.amazonaws.com
+🖥️ public IP: http://logistics-alb-1796139297.us-east-1.elb.amazonaws.com
 
 
