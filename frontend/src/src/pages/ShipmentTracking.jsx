@@ -205,7 +205,7 @@ const ShipmentTracking = () => {
                         {!shipment && !error && (
                             <div className="bg-slate-900/20 border border-indigo-500/20 border-dashed rounded-2xl p-6 flex flex-col items-center justify-center text-center h-full shadow-[inset_0_0_30px_rgba(99,102,241,0.05)]">
                                 <div className="bg-gradient-to-r from-blue-500/10 to-indigo-500/10 p-3.5 rounded-full border border-blue-500/20 mb-3 shadow-[0_0_15px_rgba(99,102,241,0.1)]">
-                                    <Truck className="h-6 w-6 text-indigo-400 animate-bounce" />
+                                    <Truck className="h-6 w-6 !text-indigo-400 animate-bounce" />
                                 </div>
                                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">System Standing By</h3>
                                 <p className="text-[10px] text-slate-600 max-w-xs mt-1">Awaiting tracking request. Active data will materialize right here.</p>
