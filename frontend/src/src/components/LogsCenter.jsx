@@ -3,11 +3,12 @@ import { trackingService } from '../services/trackingService';
 import { fuelLogService } from '../services/fuelLogService';
 import { maintenanceService } from '../services/maintenanceService';
 import { incidentService } from '../services/incidentService';
-import { locationService } from '../services/locationService'; // 👈 Location Service Import
+import { locationService } from '../services/locationService';
+import { Wrench, PlusCircle, Search, RotateCcw, AlertTriangle, ShieldCheck } from 'lucide-react';
 
 const LogsCenter = ({ showNotification }) => {
-    // 📍 New Category: GPS_TELEMETRY
-    const [logCategory, setLogCategory] = useState('TRACKING'); // TRACKING | GPS_TELEMETRY | FUEL | MAINTENANCE | INCIDENTS
+    // 📍 Categories: TRACKING | GPS_TELEMETRY | FUEL | MAINTENANCE | INCIDENTS
+    const [logCategory, setLogCategory] = useState('TRACKING');
     const [logs, setLogs] = useState([]);
     const [loading, setLoading] = useState(false);
     const [searchShipmentId, setSearchShipmentId] = useState('');
@@ -46,7 +47,6 @@ const LogsCenter = ({ showNotification }) => {
                 setLogs(parsedLogs);
 
             } else if (logCategory === 'GPS_TELEMETRY') {
-                // 📍 GPS Telemetry Logs (Paged & ORDER BY id DESC)
                 const data = await locationService.getLocationHistoryLogs(currentPage, pageSize, searchTripId.trim());
                 setLogs(data.content || []);
                 setTotalPages(data.totalPages || 0);
@@ -76,12 +76,10 @@ const LogsCenter = ({ showNotification }) => {
         }
     };
 
-    // Re-fetch logs on category or page changes
     useEffect(() => {
         fetchLogs();
     }, [logCategory, currentPage]);
 
-    // Handle Checkpoint Manual Entry Form Submit
     const handleCreateLog = async (e) => {
         e.preventDefault();
         setSubmitting(true);
@@ -112,7 +110,6 @@ const LogsCenter = ({ showNotification }) => {
         }
     };
 
-    // 🔧 Handle Settle Maintenance Form Submit
     const handleSettleMaintenance = async (e) => {
         e.preventDefault();
         setSubmitting(true);
@@ -137,7 +134,6 @@ const LogsCenter = ({ showNotification }) => {
         }
     };
 
-    // 🚨 Handle Resolve Incident Action
     const handleResolveIncident = async (incidentId) => {
         try {
             await incidentService.resolveIncident(incidentId);
@@ -153,7 +149,6 @@ const LogsCenter = ({ showNotification }) => {
         }
     };
 
-    // 📍 Handler for GPS Search Filter
     const handleGpsSearch = (e) => {
         e.preventDefault();
         setCurrentPage(0);
@@ -162,10 +157,12 @@ const LogsCenter = ({ showNotification }) => {
 
     return (
         <div className="space-y-6 text-white animate-fadeIn">
-            {/* Header & Add Button */}
+            {/* Page Title Header */}
             <div className="flex justify-between items-center flex-wrap gap-4">
                 <div>
-                    <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight !text-white">📜 System Audit & Logs</h1>
+                    <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white flex items-center gap-2">
+                        📜 System Audit & Logs
+                    </h1>
                     <p className="text-slate-400 text-xs md:text-sm mt-1">
                         Monitor real-time operational tracking, GPS telemetry, fuel, fleet maintenance, and driver emergency audit logs.
                     </p>
@@ -175,7 +172,7 @@ const LogsCenter = ({ showNotification }) => {
                         onClick={() => setIsModalOpen(true)}
                         className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all shadow-lg shadow-blue-600/20 cursor-pointer flex items-center gap-1.5"
                     >
-                        <span>+</span> Add Checkpoint Log
+                        <PlusCircle className="h-4 w-4" /> Add Checkpoint Log
                     </button>
                 )}
             </div>
@@ -246,14 +243,14 @@ const LogsCenter = ({ showNotification }) => {
                     />
                     <button
                         onClick={fetchLogs}
-                        className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
                     >
-                        Search
+                        <Search className="h-3.5 w-3.5" /> Search
                     </button>
                 </div>
             )}
 
-            {/* 📍 Search Filter for GPS Telemetry */}
+            {/* Search Filter for GPS Telemetry */}
             {logCategory === 'GPS_TELEMETRY' && (
                 <form onSubmit={handleGpsSearch} className="flex gap-3 max-w-md">
                     <input
@@ -366,16 +363,15 @@ const LogsCenter = ({ showNotification }) => {
                                         </>
                                     )}
 
-                                    {/* 📍 GPS TELEMETRY ROW */}
                                     {logCategory === 'GPS_TELEMETRY' && (
                                         <>
                                             <td className="py-3 px-4 text-cyan-400 font-bold">
                                                 #{log.trip?.id || log.tripId || 'N/A'}
                                             </td>
                                             <td className="py-3 px-4 text-slate-200 font-sans font-medium">
-                                                <span className="px-2 py-0.5 bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 rounded text-[11px]">
-                                                    📍 {log.location || 'En Route'}
-                                                </span>
+                                                    <span className="px-2 py-0.5 bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 rounded text-[11px]">
+                                                        📍 {log.location || 'En Route'}
+                                                    </span>
                                             </td>
                                             <td className="py-3 px-4 text-slate-400 text-[11px]">
                                                 {log.latitude?.toFixed(4)}, {log.longitude?.toFixed(4)}
@@ -430,9 +426,9 @@ const LogsCenter = ({ showNotification }) => {
                                                             setSettleLogId(log.id);
                                                             setIsSettleModalOpen(true);
                                                         }}
-                                                        className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] px-3 py-1 rounded-lg transition-all shadow-md cursor-pointer"
+                                                        className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] px-3 py-1 rounded-lg transition-all shadow-md cursor-pointer flex items-center gap-1"
                                                     >
-                                                        🔧 Settle & Release
+                                                        <Wrench className="h-3 w-3" /> Settle & Release
                                                     </button>
                                                 ) : (
                                                     <span className="text-slate-500 text-[11px]">Released</span>
@@ -449,8 +445,8 @@ const LogsCenter = ({ showNotification }) => {
                                             <td className="py-3 px-4 text-blue-400 font-bold">
                                                 #{log.trip?.id || 'N/A'}
                                             </td>
-                                            <td className="py-3 px-4 font-bold text-red-400 font-sans">
-                                                ⚠️ {log.incidentType}
+                                            <td className="py-3 px-4 font-bold text-red-400 font-sans flex items-center gap-1">
+                                                <AlertTriangle className="h-3.5 w-3.5" /> {log.incidentType}
                                             </td>
                                             <td className="py-3 px-4 text-slate-200 font-sans max-w-xs">
                                                 {log.description}
@@ -460,9 +456,9 @@ const LogsCenter = ({ showNotification }) => {
                                             </td>
                                             <td className="py-3 px-4 font-sans">
                                                 {log.resolved ? (
-                                                    <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-1 rounded text-[10px] font-bold">
-                                                        RESOLVED
-                                                    </span>
+                                                    <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-1 rounded text-[10px] font-bold inline-flex items-center gap-1">
+                                                            <ShieldCheck className="h-3 w-3" /> RESOLVED
+                                                        </span>
                                                 ) : (
                                                     <button
                                                         onClick={() => handleResolveIncident(log.id)}
@@ -481,7 +477,7 @@ const LogsCenter = ({ showNotification }) => {
                     </div>
                 )}
 
-                {/* 📄 Pagination Controls for GPS Telemetry Category */}
+                {/* Pagination Controls */}
                 {logCategory === 'GPS_TELEMETRY' && totalPages > 1 && (
                     <div className="flex justify-between items-center pt-4 border-t border-slate-800 mt-4">
                         <span className="text-xs text-slate-400">
@@ -491,14 +487,14 @@ const LogsCenter = ({ showNotification }) => {
                             <button
                                 disabled={currentPage === 0}
                                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 0))}
-                                className="px-3 py-1.5 bg-slate-800 disabled:opacity-40 hover:bg-slate-700 text-xs rounded-xl transition-all cursor-pointer"
+                                className="px-3 py-1.5 bg-slate-800 disabled:opacity-40 hover:bg-slate-700 text-xs rounded-xl transition-all cursor-pointer text-slate-300"
                             >
                                 ◀ Previous
                             </button>
                             <button
                                 disabled={currentPage + 1 >= totalPages}
                                 onClick={() => setCurrentPage(prev => prev + 1)}
-                                className="px-3 py-1.5 bg-slate-800 disabled:opacity-40 hover:bg-slate-700 text-xs rounded-xl transition-all cursor-pointer"
+                                className="px-3 py-1.5 bg-slate-800 disabled:opacity-40 hover:bg-slate-700 text-xs rounded-xl transition-all cursor-pointer text-slate-300"
                             >
                                 Next ▶
                             </button>
@@ -511,52 +507,54 @@ const LogsCenter = ({ showNotification }) => {
             {isModalOpen && (
                 <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                     <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl w-full max-w-md shadow-2xl space-y-4">
-                        <h2 className="text-lg font-bold !text-white">➕ Add Checkpoint Log</h2>
+                        <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                            <PlusCircle className="h-4 w-4 text-blue-400" /> Add Checkpoint Log
+                        </h3>
                         <form onSubmit={handleCreateLog} className="space-y-3">
                             <div>
-                                <label className="text-[11px] text-slate-400 block mb-1">Shipment ID</label>
+                                <label className="block text-[10px] uppercase tracking-wider text-slate-400 mb-1.5 font-bold">Shipment ID</label>
                                 <input
                                     type="number"
                                     required
                                     value={newLog.shipmentId}
                                     onChange={(e) => setNewLog({ ...newLog, shipmentId: e.target.value })}
-                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500 font-mono"
                                     placeholder="e.g. 5"
                                 />
                             </div>
                             <div>
-                                <label className="text-[11px] text-slate-400 block mb-1">Location / City Hub</label>
+                                <label className="block text-[10px] uppercase tracking-wider text-slate-400 mb-1.5 font-bold">Location / City Hub</label>
                                 <input
                                     type="text"
                                     required
                                     value={newLog.locationCity}
                                     onChange={(e) => setNewLog({ ...newLog, locationCity: e.target.value })}
-                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
                                     placeholder="e.g. Lahore Transit Hub"
                                 />
                             </div>
                             <div>
-                                <label className="text-[11px] text-slate-400 block mb-1">Activity Description</label>
+                                <label className="block text-[10px] uppercase tracking-wider text-slate-400 mb-1.5 font-bold">Activity Description</label>
                                 <textarea
                                     required
                                     value={newLog.statusActivity}
                                     onChange={(e) => setNewLog({ ...newLog, statusActivity: e.target.value })}
-                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500 h-20"
+                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500 h-20 resize-none"
                                     placeholder="e.g. Parcel arrived at distribution center"
                                 />
                             </div>
-                            <div className="flex justify-end gap-2 pt-2">
+                            <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
                                 <button
                                     type="button"
                                     onClick={() => setIsModalOpen(false)}
-                                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-xs rounded-xl font-bold transition-all cursor-pointer"
+                                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-xl font-bold transition-all cursor-pointer"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     type="submit"
                                     disabled={submitting}
-                                    className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-xs rounded-xl font-bold transition-all cursor-pointer disabled:opacity-50"
+                                    className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs rounded-xl font-bold transition-all cursor-pointer disabled:opacity-50"
                                 >
                                     {submitting ? "Saving..." : "Save Log Entry"}
                                 </button>
@@ -570,38 +568,40 @@ const LogsCenter = ({ showNotification }) => {
             {isSettleModalOpen && (
                 <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                     <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl w-full max-w-md shadow-2xl space-y-4">
-                        <h2 className="text-lg font-bold !text-white">🔧 Settle Bill & Release Vehicle</h2>
+                        <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                            <Wrench className="h-4 w-4 text-emerald-400" /> Settle Bill & Release Vehicle
+                        </h3>
                         <p className="text-slate-400 text-xs">
-                            Enter final repair/inspection cost to clear this maintenance log and mark vehicle as <b>AVAILABLE</b>.
+                            Enter final repair/inspection cost to clear this maintenance log and mark vehicle as <b className="text-emerald-400">AVAILABLE</b>.
                         </p>
-                        <form onSubmit={handleSettleMaintenance} className="space-y-3">
+                        <form onSubmit={handleSettleMaintenance} className="space-y-4 pt-2">
                             <div>
-                                <label className="text-[11px] text-slate-400 block mb-1">Total Maintenance Cost (PKR)</label>
+                                <label className="block text-[10px] uppercase tracking-wider text-slate-400 mb-1.5 font-bold">Total Maintenance Cost (PKR)</label>
                                 <input
                                     type="number"
                                     step="0.01"
                                     required
                                     value={settleCost}
                                     onChange={(e) => setSettleCost(e.target.value)}
-                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500 font-mono"
                                     placeholder="e.g. 15000"
                                 />
                             </div>
-                            <div className="flex justify-end gap-2 pt-2">
+                            <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
                                 <button
                                     type="button"
                                     onClick={() => {
                                         setIsSettleModalOpen(false);
                                         setSettleLogId(null);
                                     }}
-                                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-xs rounded-xl font-bold transition-all cursor-pointer"
+                                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-xl font-bold transition-all cursor-pointer"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     type="submit"
                                     disabled={submitting}
-                                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-xs rounded-xl font-bold transition-all cursor-pointer disabled:opacity-50"
+                                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs rounded-xl font-bold transition-all cursor-pointer disabled:opacity-50"
                                 >
                                     {submitting ? "Processing..." : "Settle & Release"}
                                 </button>

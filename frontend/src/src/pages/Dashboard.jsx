@@ -138,17 +138,20 @@ const Dashboard = () => {
         }
     };
 
-    const handleDeleteUser = async (id, name) => {
-        if (window.confirm(`Are you sure you want to terminate ${name || 'this user'}?`)) {
-            try {
-                await userService.deleteUser(id);
-                showNotification("User account purged successfully.", "success");
-                loadUsers();
-            } catch (err) {
-                showNotification("Failed to delete user structure.", "error");
-            }
+  const handleDeleteUser = async (id, name) => {
+    if (window.confirm(`Are you sure you want to terminate ${name || 'this user'}?`)) {
+        try {
+            await userService.deleteUser(id);
+            showNotification("User account purged successfully.", "success");
+            loadUsers();
+        } catch (err) {
+            console.error("Delete error:", err);
+            // Backend se aaya hua exact error message (e.g., 403 Forbidden message) dikhane ke liye:
+            const errorMessage = err.response?.data?.message || "Failed to delete user structure.";
+            showNotification(errorMessage, "error");
         }
-    };
+    }
+};
 
     const openEditModal = (user) => {
         setEditingUser({
@@ -444,36 +447,48 @@ const Dashboard = () => {
                     {/* 📊 ADMIN VIEW 1: FLEET OVERVIEW */}
                     {userRole === 'ADMIN' && activeTab === 'fleet-overview' && (
                         <div className="space-y-6 md:space-y-8 animate-fadeIn">
-                            <div>
-                                <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight !text-white">Admin System Overview</h1>
-                                <p className="text-slate-400 text-xs md:text-sm mt-2 max-w-2xl bg-slate-950/60 p-3 rounded-xl inline-block border border-slate-800/40">Secure administrative oversight of active nodes.</p>
+                            {/* Standardized Header */}
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center pb-6 border-b border-slate-800/80 gap-4">
+                                <div>
+                                    <h1 className="text-2xl font-extrabold text-white tracking-tight flex items-center gap-2">
+                                        <span>📊</span> Admin System Overview
+                                    </h1>
+                                    <p className="text-slate-400 text-xs mt-1">
+                                        Secure administrative oversight of active system nodes, personnel, and fleet resources.
+                                    </p>
+                                </div>
                             </div>
 
+                            {/* Metrics Cards Grid */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                                <div className="bg-slate-900/80 border border-slate-800/80 p-5 rounded-2xl shadow-xl">
+                                <div className="bg-slate-900/80 border border-slate-800 p-5 rounded-2xl shadow-xl backdrop-blur-md">
                                     <span className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Total Registered Cargo Staff</span>
                                     <h3 className="text-3xl font-black mt-3 text-blue-500">{users.length}</h3>
                                 </div>
 
-
-                                <div className="bg-slate-900/80 border border-slate-800/80 p-5 rounded-2xl shadow-xl">
+                                <div className="bg-slate-900/80 border border-slate-800 p-5 rounded-2xl shadow-xl backdrop-blur-md">
                                     <span className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Total Registered Vehicles</span>
                                     <h3 className="text-3xl font-black mt-3 text-indigo-400">{vehicles.length}</h3>
                                 </div>
-
                             </div>
                         </div>
                     )}
 
                     {/* 📦 SENDER & SHIPMENT BOOKING VIEW */}
                     {(userRole === 'ADMIN' || userRole === 'EMPLOYEE') && activeTab === 'book-shipment' && (
-                        <div className="space-y-6 animate-fadeIn max-w-5xl mx-auto">
-                            <div>
-                                <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight !text-white">Counter Booking Desk</h1>
-                                <p className="text-slate-400 text-xs md:text-sm mt-2 max-w-2xl bg-slate-950/60 p-3 rounded-xl inline-block border border-slate-800/40">
-                                    Search existing clients by phone number or register a new one to process active freight bookings.
-                                </p>
+                        <div className="space-y-6 md:space-y-8 animate-fadeIn">
+                            {/* Standardized Header Section */}
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center pb-6 border-b border-slate-800/80 gap-4">
+                                <div>
+                                    <h1 className="text-2xl font-extrabold text-white tracking-tight flex items-center gap-2">
+                                        <span>📦</span> Counter Booking Desk
+                                    </h1>
+                                    <p className="text-slate-400 text-xs mt-1">
+                                        Search existing clients by phone number or register a new one to process active freight bookings.
+                                    </p>
+                                </div>
                             </div>
+
                             <BookingDesk showNotification={showNotification} />
                         </div>
                     )}
@@ -528,16 +543,22 @@ const Dashboard = () => {
                     {/* 👥 ADMIN VIEW 2: PERSONNEL & ROLE MANAGEMENT (IAM CONTROL) */}
                     {userRole === 'ADMIN' && activeTab === 'iam-control' && (
                         <div className="bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-md animate-fadeIn">
-                            <div className="p-4 md:p-6 border-b border-slate-800 flex flex-col lg:flex-row gap-4 justify-between items-start lg:items-center bg-slate-900/40 w-full">
+
+                            {/* Standardized Header Section */}
+                            <div className="p-4 md:p-6 border-b border-slate-800/80 flex flex-col xl:flex-row gap-4 justify-between items-start xl:items-center">
                                 <div>
-                                    <h2 className="text-lg md:text-xl font-bold !text-white tracking-tight flex w-full">Personnel & Role Management</h2>
-                                    <p className="text-slate-400 text-xs mt-1">Elevate users to Admins, Employees, or Drivers.</p>
+                                    <h1 className="text-2xl font-extrabold text-white tracking-tight flex items-center gap-2">
+                                        <span>👥</span> Personnel & Role Management
+                                    </h1>
+                                    <p className="text-slate-400 text-xs mt-1">
+                                        Elevate users to Admins, Employees, or Drivers and manage security clearances.
+                                    </p>
                                 </div>
 
-                                {/* ✨ NAYA FILTERS + SEARCH CONTAINER */}
-                                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full lg:w-auto">
+                                {/* ✨ FILTERS + SEARCH CONTAINER */}
+                                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full xl:w-auto">
 
-                                    {/* Left Side inside container: Role Filter Tabs */}
+                                    {/* Role Filter Tabs */}
                                     <div className="flex gap-1.5 bg-slate-950/40 p-1 rounded-xl border border-slate-800/60 w-full sm:w-auto overflow-x-auto">
                                         {['ALL', 'USER', 'EMPLOYEE', 'DRIVER'].map((role) => (
                                             <button
@@ -554,16 +575,19 @@ const Dashboard = () => {
                                         ))}
                                     </div>
 
-                                    {/* Right Side inside container: Search Input and Sync */}
+                                    {/* Search Input & Refresh Button */}
                                     <div className="flex items-center gap-2 w-full sm:w-auto">
                                         <input
                                             type="text"
                                             placeholder="Search..."
                                             value={searchTerm}
                                             onChange={(e) => setSearchTerm(e.target.value)}
-                                            className="bg-slate-950/60 border border-slate-800 px-4 py-2 rounded-xl text-xs md:text-sm text-slate-200 focus:outline-none focus:border-blue-500 w-full lg:w-64"
+                                            className="bg-slate-950/60 border border-slate-800 px-4 py-2 rounded-xl text-xs md:text-sm text-slate-200 focus:outline-none focus:border-blue-500 w-full xl:w-64"
                                         />
-                                        <button onClick={loadUsers} className="bg-blue-600/20 hover:bg-blue-600/40 border border-blue-500/30 text-blue-400 px-3 py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer">
+                                        <button
+                                            onClick={loadUsers}
+                                            className="bg-blue-600/20 hover:bg-blue-600/40 border border-blue-500/30 text-blue-400 px-3 py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1.5"
+                                        >
                                             🔄 Sync
                                         </button>
                                     </div>
@@ -571,7 +595,9 @@ const Dashboard = () => {
                             </div>
 
                             {loading ? (
-                                <div className="p-16 text-center text-slate-400 font-medium animate-pulse text-xs md:text-sm">Syncing infrastructure...</div>
+                                <div className="p-16 text-center text-slate-400 font-medium animate-pulse text-xs md:text-sm">
+                                    Syncing infrastructure...
+                                </div>
                             ) : (
                                 <>
                                     {/* DESKTOP TABLE */}
@@ -593,15 +619,70 @@ const Dashboard = () => {
                                                     <td colSpan="6" className="p-10 text-center text-slate-500">No nodes found.</td>
                                                 </tr>
                                             ) : (
-                                                filteredUsers.map((u) => (
-                                                    <tr key={u.id} className="hover:bg-slate-800/30 transition-all">
-                                                        <td className="py-4 px-4 pl-6 font-mono text-slate-500 text-xs">#{u.id}</td>
-                                                        <td className="py-4 px-4 font-bold text-white">{u.fullName || 'Unassigned'}</td>
-                                                        <td className="py-4 px-4 text-slate-300">{u.username}</td>
-                                                        <td className="py-4 px-4">
+                                                filteredUsers.map((u) => {
+                                                    const isSuperAdmin = u.username?.toLowerCase() === 'super_admin';
+                                                    return (
+                                                        <tr key={u.id} className="hover:bg-slate-800/30 transition-all">
+                                                            <td className="py-4 px-4 pl-6 font-mono text-slate-500 text-xs">#{u.id}</td>
+                                                            <td className="py-4 px-4 font-bold text-white">{u.fullName || 'Unassigned'}</td>
+                                                            <td className="py-4 px-4 text-slate-300">{u.username}</td>
+                                                            <td className="py-4 px-4">
+                                                                <div className="flex gap-1.5 flex-wrap">
+                                                                    {u.roles?.map((r) => (
+                                                                        <span key={r.id} className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${
+                                                                            r.roleName === 'ADMIN' ? 'bg-pink-500/20 text-pink-400 border border-pink-500/30' :
+                                                                                r.roleName === 'EMPLOYEE' ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30' :
+                                                                                    r.roleName === 'DRIVER' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
+                                                                                        'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                                                                        }`}>{r.roleName}</span>
+                                                                    ))}
+                                                                </div>
+                                                            </td>
+                                                            <td className="py-4 px-4 text-center">
+                                                                <div className="flex justify-center gap-2">
+                                                                    <button onClick={() => handlePromoteAdmin(u.id)} className="px-2.5 py-1.5 bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-xl text-[10px] font-bold cursor-pointer hover:opacity-90 transition-opacity">Admin</button>
+                                                                    <button onClick={() => handlePromoteEmployee(u.id)} className="px-2.5 py-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl text-[10px] font-bold cursor-pointer hover:opacity-90 transition-opacity">Employee</button>
+                                                                    <button onClick={() => handleMakeDriver(u.id)} className="px-2.5 py-1.5 bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-xl text-[10px] font-bold cursor-pointer hover:opacity-90 transition-opacity">Driver</button>
+                                                                </div>
+                                                            </td>
+                                                            <td className="py-4 px-6 text-center">
+                                                                <div className="flex justify-center items-center gap-2">
+                                                                    <button onClick={() => openEditModal(u)} className="p-1.5 bg-slate-800 border border-slate-700 text-slate-300 rounded-xl text-xs cursor-pointer hover:bg-slate-700 transition-all">✏️</button>
+
+                                                                    {/* Super Admin Protection Guard */}
+                                                                    {isSuperAdmin ? (
+                                                                        <span className="px-2 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded-lg text-[10px] font-bold uppercase tracking-wider">
+                                                            🛡️ Protected
+                                                        </span>
+                                                                    ) : (
+                                                                        <button onClick={() => handleDeleteUser(u.id, u.fullName)} className="p-1.5 bg-red-600/10 text-red-400 border border-red-500/20 rounded-xl text-xs cursor-pointer hover:bg-red-600/20 transition-all">🗑️</button>
+                                                                    )}
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })
+                                            )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    {/* MOBILE CARDS (DASHBOARD FOR MOBILE ADMINS) */}
+                                    <div className="block md:hidden p-4 space-y-4">
+                                        {filteredUsers.length === 0 ? (
+                                            <div className="text-center p-8 text-slate-500 text-xs">No matching nodes found.</div>
+                                        ) : (
+                                            filteredUsers.map((u) => {
+                                                const isSuperAdmin = u.username?.toLowerCase() === 'super_admin';
+                                                return (
+                                                    <div key={u.id} className="bg-slate-950/60 border border-slate-800/80 p-4 rounded-2xl space-y-3 shadow-lg hover:border-slate-700/80 transition-all">
+
+                                                        {/* Top ID & Role Badges */}
+                                                        <div className="flex justify-between items-center border-b border-slate-800/80 pb-2.5">
+                                                            <span className="font-mono text-xs font-semibold text-slate-500">#{u.id}</span>
                                                             <div className="flex gap-1.5 flex-wrap">
                                                                 {u.roles?.map((r) => (
-                                                                    <span key={r.id} className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${
+                                                                    <span key={r.id} className={`px-2 py-0.5 rounded-lg text-[9px] font-bold uppercase tracking-wider ${
                                                                         r.roleName === 'ADMIN' ? 'bg-pink-500/20 text-pink-400 border border-pink-500/30' :
                                                                             r.roleName === 'EMPLOYEE' ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30' :
                                                                                 r.roleName === 'DRIVER' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
@@ -609,66 +690,41 @@ const Dashboard = () => {
                                                                     }`}>{r.roleName}</span>
                                                                 ))}
                                                             </div>
-                                                        </td>
-                                                        <td className="py-4 px-4 text-center">
-                                                            <div className="flex justify-center gap-2">
-                                                                <button onClick={() => handlePromoteAdmin(u.id)} className="px-2.5 py-1.5 bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-xl text-[10px] font-bold cursor-pointer">Admin</button>
-                                                                {/* ✨ PROMOTED TO EMPLOYEE BUTTON */}
-                                                                <button onClick={() => handlePromoteEmployee(u.id)} className="px-2.5 py-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl text-[10px] font-bold cursor-pointer">Employee</button>
-                                                                <button onClick={() => handleMakeDriver(u.id)} className="px-2.5 py-1.5 bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-xl text-[10px] font-bold cursor-pointer">Driver</button>
+                                                        </div>
+
+                                                        {/* Staff Name & Username */}
+                                                        <div>
+                                                            <h4 className="text-sm font-bold text-white tracking-tight">{u.fullName || 'Unassigned'}</h4>
+                                                            <p className="text-xs text-slate-400 mt-0.5">@{u.username}</p>
+                                                        </div>
+
+                                                        {/* Role Action Buttons & Edit/Delete */}
+                                                        <div className="flex flex-col gap-3 pt-1">
+                                                            <div>
+                                                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">Assign Clearances:</span>
+                                                                <div className="flex gap-1.5 flex-wrap">
+                                                                    <button onClick={() => handlePromoteAdmin(u.id)} className="px-2.5 py-1 bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-lg text-[10px] font-bold cursor-pointer hover:opacity-90 transition-opacity">Admin</button>
+                                                                    <button onClick={() => handlePromoteEmployee(u.id)} className="px-2.5 py-1 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg text-[10px] font-bold cursor-pointer hover:opacity-90 transition-opacity">Employee</button>
+                                                                    <button onClick={() => handleMakeDriver(u.id)} className="px-2.5 py-1 bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-lg text-[10px] font-bold cursor-pointer hover:opacity-90 transition-opacity">Driver</button>
+                                                                </div>
                                                             </div>
-                                                        </td>
-                                                        <td className="py-4 px-6 text-center">
-                                                            <div className="flex justify-center gap-2">
-                                                                <button onClick={() => openEditModal(u)} className="p-1.5 bg-slate-800 border border-slate-700 text-slate-300 rounded-xl text-xs cursor-pointer">✏️</button>
-                                                                <button onClick={() => handleDeleteUser(u.id, u.fullName)} className="p-1.5 bg-red-600/10 text-red-400 border border-red-500/20 rounded-xl text-xs cursor-pointer">🗑️</button>
+
+                                                            <div className="flex gap-2 justify-end items-center border-t border-slate-800/80 pt-2.5">
+                                                                <button onClick={() => openEditModal(u)} className="p-1.5 bg-slate-800 border border-slate-700 text-slate-300 rounded-xl text-xs cursor-pointer hover:bg-slate-700 transition-all">✏️</button>
+
+                                                                {/* Mobile Super Admin Protection Guard */}
+                                                                {isSuperAdmin ? (
+                                                                    <span className="px-2 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded-lg text-[9px] font-bold uppercase tracking-wider">
+                                                    🛡️ Protected
+                                                </span>
+                                                                ) : (
+                                                                    <button onClick={() => handleDeleteUser(u.id, u.fullName)} className="p-1.5 bg-red-600/10 text-red-400 border border-red-500/20 rounded-xl text-xs cursor-pointer hover:bg-red-600/20 transition-all">🗑️</button>
+                                                                )}
                                                             </div>
-                                                        </td>
-                                                    </tr>
-                                                ))
-                                            )}
-                                            </tbody>
-                                        </table>
-                                    </div>
-
-                                    {/* MOBILE CARDS (DASHBOARD FOR MOBILE ADMINDER) */}
-                                    <div className="block md:hidden p-4 space-y-4">
-                                        {filteredUsers.length === 0 ? (
-                                            <div className="text-center p-6 text-slate-500 text-xs">No matching nodes found.</div>
-                                        ) : (
-                                            filteredUsers.map((u) => (
-                                                <div key={u.id} className="bg-slate-950/50 border border-slate-800 p-4 rounded-xl space-y-3 shadow-md">
-                                                    <div className="flex justify-between items-center border-b border-slate-800 pb-2">
-                                                        <span className="font-mono text-xs text-slate-500">#{u.id}</span>
-                                                        <div className="flex gap-1.5">
-                                                            {u.roles?.map((r) => (
-                                                                <span key={r.id} className={`px-2 py-0.5 rounded-md text-[9px] font-bold uppercase ${
-                                                                    r.roleName === 'ADMIN' ? 'bg-pink-500/20 text-pink-400' :
-                                                                        r.roleName === 'EMPLOYEE' ? 'bg-indigo-500/20 text-indigo-400' :
-                                                                            r.roleName === 'DRIVER' ? 'bg-amber-500/20 text-amber-400' : 'bg-blue-500/20 text-blue-300'
-                                                                }`}>{r.roleName}</span>
-                                                            ))}
                                                         </div>
                                                     </div>
-
-                                                    <div>
-                                                        <h4 className="text-sm font-bold text-white">{u.fullName || 'Unassigned'}</h4>
-                                                        <p className="text-xs text-slate-400">@{u.username}</p>
-                                                    </div>
-
-                                                    <div className="flex flex-col gap-2 pt-1">
-                                                        <div className="flex gap-1.5 flex-wrap">
-                                                            <button onClick={() => handlePromoteAdmin(u.id)} className="px-2 py-1 bg-pink-600 text-white rounded-lg text-[10px] font-bold">Admin</button>
-                                                            <button onClick={() => handlePromoteEmployee(u.id)} className="px-2 py-1 bg-indigo-600 text-white rounded-lg text-[10px] font-bold">Employee</button>
-                                                            <button onClick={() => handleMakeDriver(u.id)} className="px-2 py-1 bg-amber-600 text-white rounded-lg text-[10px] font-bold">Driver</button>
-                                                        </div>
-                                                        <div className="flex gap-1.5 justify-end border-t border-slate-800/60 pt-2">
-                                                            <button onClick={() => openEditModal(u)} className="p-1.5 bg-slate-800 text-slate-300 rounded-lg text-xs">✏️</button>
-                                                            <button onClick={() => handleDeleteUser(u.id, u.fullName)} className="p-1.5 bg-red-950/40 text-red-400 rounded-lg text-xs">🗑️</button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ))
+                                                );
+                                            })
                                         )}
                                     </div>
                                 </>

@@ -5,6 +5,7 @@ import com.example.Logistics.security.JwtUtils;
 import com.example.Logistics.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -61,8 +62,18 @@ public class UserController {
 
     //update-> put
     @PutMapping("/{id}")
-    public ResponseEntity<User> updateUser(@PathVariable long id, @RequestBody User userDetails){     //@RequestBody=json data to class object
-        User updatedUser= userService.updateUser(id, userDetails);
+    public ResponseEntity<?> updateUser(@PathVariable long id, @RequestBody User userDetails){
+        User existingUser = userService.getUserById(id).orElse(null);
+
+        if (existingUser != null && "super_admin".equalsIgnoreCase(existingUser.getUsername())) {
+            // Agar super_admin ka username change ya modify hone se rokna ho
+            if (!existingUser.getUsername().equalsIgnoreCase(userDetails.getUsername())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("message", "Error: Super admin username cannot be changed!"));
+            }
+        }
+
+        User updatedUser = userService.updateUser(id, userDetails);
         return ResponseEntity.ok(updatedUser);
     }
 
@@ -78,7 +89,7 @@ public class UserController {
         User updatedUser = userService.promoteToEmployee(id);
         return ResponseEntity.ok(updatedUser);
     }
-    
+
     // Make Driver
     @PutMapping("/{id}/make-driver")
     public ResponseEntity<User> makeDriver(@PathVariable Long id) {
@@ -86,11 +97,28 @@ public class UserController {
         return ResponseEntity.ok(updatedUser);
     }
 
-    //Delete
+    // Delete with Protected Guard
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteUser(@PathVariable long id){
+    public ResponseEntity<?> deleteUser(@PathVariable long id){
+        User userToDelete = userService.getUserById(id).orElse(null);
+
+        if (userToDelete != null) {
+            // Restriction 1: super_admin username wale user ko deletion se block karein
+            boolean isSuperAdmin = "super_admin".equalsIgnoreCase(userToDelete.getUsername());
+
+            // Restriction 2: Check karein agar user ke pas ROLE_ADMIN / ADMIN ka role hai
+            boolean isAdminRole = userToDelete.getRoles() != null && userToDelete.getRoles().stream()
+                    .anyMatch(role -> role.getRoleName().equalsIgnoreCase("ROLE_ADMIN")
+                            || role.getRoleName().equalsIgnoreCase("ADMIN"));
+
+            if (isSuperAdmin || isAdminRole) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("message", "Error: Protected Admin accounts cannot be deleted!"));
+            }
+        }
+
         userService.deleteUser(id);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(Map.of("message", "User deleted successfully"));
     }
 
     //Login
@@ -109,7 +137,7 @@ public class UserController {
         Map<String, Object> response = new HashMap<>();
         response.put("token", token);
         response.put("message", "Login successful!");
-        
+
         // Frontend ke liye required metadata payload
         response.put("id", user.getId());
         response.put("username", user.getUsername());
@@ -119,6 +147,4 @@ public class UserController {
 
         return ResponseEntity.ok(response);
     }
-
-
 }
