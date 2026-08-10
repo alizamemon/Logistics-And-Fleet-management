@@ -450,7 +450,7 @@ const Dashboard = () => {
                             {/* Standardized Header */}
                             <div className="flex flex-col md:flex-row justify-between items-start md:items-center pb-6 border-b border-slate-800/80 gap-4">
                                 <div>
-                                    <h1 className="text-2xl font-extrabold text-white tracking-tight flex items-center gap-2">
+                                    <h1 className="text-2xl font-extrabold !text-white tracking-tight flex items-center gap-2">
                                         <span>📊</span> Admin System Overview
                                     </h1>
                                     <p className="text-slate-400 text-xs mt-1">
@@ -545,9 +545,10 @@ const Dashboard = () => {
                         <div className="bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-md animate-fadeIn">
 
                             {/* Standardized Header Section */}
-                            <div className="p-4 md:p-6 border-b border-slate-800/80 flex flex-col xl:flex-row gap-4 justify-between items-start xl:items-center">
+                            <div className="p-4 md:p-6 border-b border-slate-800/80 space-y-4">
+                                {/* Title Row */}
                                 <div>
-                                    <h1 className="text-2xl font-extrabold text-white tracking-tight flex items-center gap-2">
+                                    <h1 className="text-2xl font-extrabold !text-white tracking-tight flex items-center gap-2">
                                         <span>👥</span> Personnel & Role Management
                                     </h1>
                                     <p className="text-slate-400 text-xs mt-1">
@@ -555,11 +556,11 @@ const Dashboard = () => {
                                     </p>
                                 </div>
 
-                                {/* ✨ FILTERS + SEARCH CONTAINER */}
-                                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full xl:w-auto">
+                                {/* ✨ FILTERS + SEARCH ROW (Below Elevate line in single row) */}
+                                <div className="flex flex-wrap items-center justify-between gap-3 w-full pt-2 border-t border-slate-800/40">
 
                                     {/* Role Filter Tabs */}
-                                    <div className="flex gap-1.5 bg-slate-950/40 p-1 rounded-xl border border-slate-800/60 w-full sm:w-auto overflow-x-auto">
+                                    <div className="flex gap-1.5 bg-slate-950/40 p-1 rounded-xl border border-slate-800/60 overflow-x-auto">
                                         {['ALL', 'USER', 'EMPLOYEE', 'DRIVER'].map((role) => (
                                             <button
                                                 key={role}
@@ -576,13 +577,13 @@ const Dashboard = () => {
                                     </div>
 
                                     {/* Search Input & Refresh Button */}
-                                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                                    <div className="flex items-center gap-2 flex-1 max-w-xs ml-auto">
                                         <input
                                             type="text"
                                             placeholder="Search..."
                                             value={searchTerm}
                                             onChange={(e) => setSearchTerm(e.target.value)}
-                                            className="bg-slate-950/60 border border-slate-800 px-4 py-2 rounded-xl text-xs md:text-sm text-slate-200 focus:outline-none focus:border-blue-500 w-full xl:w-64"
+                                            className="bg-slate-950/60 border border-slate-800 px-4 py-2 rounded-xl text-xs md:text-sm text-slate-200 focus:outline-none focus:border-blue-500 w-full"
                                         />
                                         <button
                                             onClick={loadUsers}
@@ -652,8 +653,8 @@ const Dashboard = () => {
                                                                     {/* Super Admin Protection Guard */}
                                                                     {isSuperAdmin ? (
                                                                         <span className="px-2 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded-lg text-[10px] font-bold uppercase tracking-wider">
-                                                            🛡️ Protected
-                                                        </span>
+                                                        🛡️ Protected
+                                                    </span>
                                                                     ) : (
                                                                         <button onClick={() => handleDeleteUser(u.id, u.fullName)} className="p-1.5 bg-red-600/10 text-red-400 border border-red-500/20 rounded-xl text-xs cursor-pointer hover:bg-red-600/20 transition-all">🗑️</button>
                                                                     )}
@@ -768,7 +769,7 @@ const Dashboard = () => {
             {isEditModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
                     <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl p-6 shadow-2xl relative">
-                        <h3 className="text-lg font-bold text-white mb-2">Patch User Configurations</h3>
+                        <h3 className="text-lg font-bold !text-white mb-2">Patch User Configurations</h3>
                         <p className="text-slate-400 text-xs mb-6">Modify node identifiers for username base: <span className="text-blue-400 font-mono">@{editingUser.username}</span></p>
 
                         <form onSubmit={handleUpdateSubmit} className="space-y-4">

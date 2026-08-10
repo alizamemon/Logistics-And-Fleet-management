@@ -138,7 +138,7 @@ const VehicleManagement = ({ currentUser, showNotification }) => {
             {/* Standardized Header Section */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center pb-6 border-b border-slate-800/80 gap-4">
                 <div>
-                    <h1 className="text-2xl font-extrabold text-white tracking-tight flex items-center gap-2">
+                    <h1 className="text-2xl font-extrabold !text-white tracking-tight flex items-center gap-2">
                         <span>🚚</span> Fleet Management
                     </h1>
                     <p className="text-slate-400 text-xs mt-1">

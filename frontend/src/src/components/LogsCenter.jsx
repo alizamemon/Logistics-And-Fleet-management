@@ -160,7 +160,7 @@ const LogsCenter = ({ showNotification }) => {
             {/* Page Title Header */}
             <div className="flex justify-between items-center flex-wrap gap-4">
                 <div>
-                    <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white flex items-center gap-2">
+                    <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight !text-white flex items-center gap-2">
                         📜 System Audit & Logs
                     </h1>
                     <p className="text-slate-400 text-xs md:text-sm mt-1">
