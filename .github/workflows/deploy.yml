@@ -26,5 +26,6 @@ jobs:
 
       - name: Deploy to Nginx Directory
         run: |
-          sudo cp -r frontend/dist/* /var/www/html/
+          sudo cp -rf frontend/dist/* /var/www/html/
+          sudo chmod -R 755 /var/www/html
           sudo systemctl restart nginx
