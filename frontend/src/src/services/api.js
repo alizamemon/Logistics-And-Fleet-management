@@ -1,5 +1,5 @@
 import axios from 'axios';
-
+const API_BASE_URL = "http://logistics-alb-1796139297.us-east-1.elb.amazonaws.com";
 const API= axios.create({
     baseURL: '/api',
     headers:{
