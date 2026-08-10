@@ -9,7 +9,8 @@ import {
     ShieldAlert,
     ArrowRight,
     Scale,
-    User
+    User,
+    Navigation
 } from 'lucide-react';
 import { shipmentService } from '../services/shipmentService';
 import bgImage from "../../assets/background.png";
@@ -39,31 +40,59 @@ const ShipmentTracking = () => {
         }
     };
 
+    const getNormalizedStatus = (status) => {
+        if (!status) return 'PENDING';
+        return status.toString().trim().toUpperCase();
+    };
+
     const getStatusStep = (status) => {
-        switch (status) {
-            case 'PENDING': return 1;
+        const s = getNormalizedStatus(status);
+        switch (s) {
+            case 'PENDING':
+            case 'BOOKED': return 1;
             case 'ASSIGNED':
             case 'ASSIGNED_PENDING_ACCEPTANCE':
             case 'DISPATCHED':
+            case 'IN_TRANSIT':
+            case 'ACCEPTED':
             case 'ON_GOING': return 2;
-            case 'DELIVERED': return 3;
+            case 'DELIVERED':
+            case 'COMPLETED': return 3;
             default: return 1;
         }
     };
 
     const currentStep = shipment ? getStatusStep(shipment.status) : 0;
 
-    // 🆕 Calculate Dynamic Progress Percentage (0% to 100%)
+    // 🚚 Distance / Location Based Dynamic Percentage Calculation
     const calculateProgressPercentage = () => {
         if (!shipment) return 0;
-        if (shipment.status === 'DELIVERED') return 100;
+        const s = getNormalizedStatus(shipment.status);
+        if (s === 'DELIVERED' || s === 'COMPLETED') return 100;
+        if (s === 'PENDING' || s === 'BOOKED') return 12;
 
-        // Agar ON_GOING / DISPATCHED ho, toh backend weight ya custom percentage field use karein (Default 65%)
-        if (currentStep === 2) {
-            return shipment.progressPercentage || 65;
+        // 1. Direct Backend progress field (if present)
+        if (shipment.progressPercentage !== undefined && shipment.progressPercentage !== null) {
+            return Math.min(Math.max(shipment.progressPercentage, 15), 92);
         }
 
-        return 10; // Booked stage
+        // 2. Location/Distance Covered Ratio
+        if (shipment.totalDistanceKm && shipment.coveredDistanceKm) {
+            const calculated = Math.round((shipment.coveredDistanceKm / shipment.totalDistanceKm) * 100);
+            return Math.min(Math.max(calculated, 15), 92);
+        }
+
+        // 3. Dynamic Elapsed Time fallback between Dispatch and Estimated Delivery
+        if (shipment.dispatchedAt) {
+            const dispatchTime = new Date(shipment.dispatchedAt).getTime();
+            const currentTime = new Date().getTime();
+            const elapsedHours = (currentTime - dispatchTime) / (1000 * 60 * 60);
+            // Dynamic progression simulation based on elapsed travel hours
+            const simulatedProgress = Math.round(20 + Math.min(elapsedHours * 15, 68));
+            return Math.min(simulatedProgress, 88);
+        }
+
+        return 55; // Default ongoing route position
     };
 
     const progressPercentage = calculateProgressPercentage();
@@ -86,12 +115,10 @@ const ShipmentTracking = () => {
             className="h-screen w-full text-slate-100 flex flex-col justify-between font-sans bg-cover bg-center bg-no-repeat relative m-0 p-0 overflow-hidden"
             style={{ backgroundImage: `url(${bgImage})` }}
         >
-            {/* Background Dark Overlay */}
             <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-[2px] z-0"></div>
             <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-[120px] pointer-events-none z-0"></div>
             <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none z-0"></div>
 
-            {/* Header */}
             <header className="relative z-10 w-full border-b border-slate-900/80 bg-slate-950/70 backdrop-blur-md px-6 py-3 flex justify-between items-center shrink-0">
                 <div className="flex items-center gap-2">
                     <div className="bg-blue-500/20 p-1.5 border border-blue-500/40 rounded-lg shadow-[0_0_10px_rgba(59,130,246,0.3)]">
@@ -103,10 +130,7 @@ const ShipmentTracking = () => {
                 </div>
             </header>
 
-            {/* Fluid Main Body */}
             <main className="relative z-10 flex-1 w-full max-w-6xl mx-auto flex flex-col justify-center px-6 py-4 gap-4 overflow-hidden">
-
-                {/* Hero Section */}
                 <div className="text-center space-y-1 shrink-0">
                     <h1 className="text-2xl md:text-3xl font-black !text-white tracking-tight leading-tight">
                         Locate Your <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-400 to-cyan-400 drop-shadow-[0_2px_10px_rgba(99,102,241,0.2)]">Shipment</span>
@@ -116,10 +140,7 @@ const ShipmentTracking = () => {
                     </p>
                 </div>
 
-                {/* Main Panel Grid */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch overflow-hidden max-h-[72vh]">
-
-                    {/* Search Form */}
                     <div className="lg:col-span-5 bg-gradient-to-b from-slate-900/70 to-slate-950/70 border border-slate-800/80 p-5 rounded-2xl backdrop-blur-xl shadow-2xl flex flex-col justify-between space-y-4">
                         <div className="space-y-4">
                             <div>
@@ -170,7 +191,6 @@ const ShipmentTracking = () => {
                         </div>
                     </div>
 
-                    {/* Dynamic Tracker Details Panel */}
                     <div className="lg:col-span-7 w-full flex flex-col justify-stretch overflow-hidden">
                         {error && (
                             <div className="bg-red-500/5 border border-red-500/30 p-5 rounded-2xl flex items-start gap-3 h-full animate-fade-in shadow-[0_0_20px_rgba(239,68,68,0.05)]">
@@ -194,7 +214,6 @@ const ShipmentTracking = () => {
 
                         {shipment && (
                             <div className="bg-gradient-to-b from-slate-900/80 to-slate-950/80 border border-slate-800 p-5 rounded-2xl backdrop-blur-xl shadow-2xl flex flex-col justify-between h-full animate-fade-in">
-
                                 <div className="space-y-4">
                                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
                                         <div className="space-y-0.5">
@@ -212,41 +231,38 @@ const ShipmentTracking = () => {
                                                         ? 'text-cyan-400 bg-cyan-500/10 border-cyan-500/30 shadow-cyan-500/10'
                                                         : 'text-amber-400 bg-amber-500/10 border-amber-500/30 shadow-amber-500/10'
                                             }`}>
-                                                {shipment.status === 'ON_GOING' ? 'ON GOING' : currentStep === 3 ? 'Delivered' : currentStep === 2 ? 'Dispatched' : 'Booked'}
+                                                {getNormalizedStatus(shipment.status)}
                                             </span>
                                         </div>
                                     </div>
 
-                                    {/* 🎨 Dynamic Progress Bar with Moving Cyan Truck & Percentage Badge */}
+                                    {/* Dynamic Route Progress Bar */}
                                     <div className="relative py-6 my-2">
-                                        {/* Progress Bar Base Line */}
                                         <div className="absolute top-1/2 left-0 w-full h-2 bg-slate-950 -translate-y-1/2 rounded-full overflow-hidden border border-slate-800/80">
                                             <div
-                                                className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-cyan-400 transition-all duration-1000 ease-out shadow-[0_0_12px_rgba(56,189,248,0.6)]"
+                                                className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-400 transition-all duration-1000 ease-out shadow-[0_0_12px_rgba(16,185,129,0.6)]"
                                                 style={{ width: `${progressPercentage}%` }}
                                             />
                                         </div>
 
-                                        {/* 🚚 Dynamic Moving Truck & Percentage Badge */}
+                                        {/* 🚚 MOVING ACTIVE FLEET TRUCK (Emerald / Neon Green Accent) */}
                                         {currentStep >= 2 && currentStep < 3 && (
                                             <div
                                                 className="absolute -top-3.5 transition-all duration-1000 ease-out z-20 flex flex-col items-center -translate-x-1/2"
                                                 style={{ left: `${progressPercentage}%` }}
                                             >
-                                                {/* Dynamic Percentage Badge */}
-                                                <span className="bg-cyan-400 text-slate-950 font-black text-[8px] px-1.5 py-0.5 rounded-full shadow-[0_0_10px_rgba(34,211,238,0.8)] mb-1 animate-pulse border border-cyan-200">
+                                                <span className="bg-emerald-400 text-slate-950 font-black text-[8px] px-1.5 py-0.5 rounded-full shadow-[0_0_10px_rgba(52,211,153,0.8)] mb-1 animate-pulse border border-emerald-200">
                                                     {progressPercentage}%
                                                 </span>
-                                                {/* Bright Cyan Highlighted Truck */}
-                                                <div className="bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-950 p-1.5 rounded-full shadow-[0_0_15px_rgba(34,211,238,0.7)] border border-cyan-200">
+                                                {/* Distinct Active Emerald Green Truck */}
+                                                <div className="bg-gradient-to-r from-emerald-400 to-teal-500 text-slate-950 p-1.5 rounded-full shadow-[0_0_15px_rgba(52,211,153,0.9)] border border-emerald-200">
                                                     <Truck className="h-3.5 w-3.5 text-slate-950" />
                                                 </div>
                                             </div>
                                         )}
 
-                                        {/* Step Nodes */}
+                                        {/* STEP STATIONS (Distinct Amber / Orange Accent for Middle Dispatch Node) */}
                                         <div className="relative flex justify-between items-center z-10">
-                                            {/* Step 1: Booked */}
                                             <div className="flex flex-col items-center">
                                                 <div className={`w-7.5 h-7.5 rounded-xl flex items-center justify-center border transition-all duration-500 ${
                                                     currentStep >= 1 ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white border-blue-400 shadow-[0_0_12px_rgba(59,130,246,0.3)]' : 'bg-slate-950 text-slate-600 border-slate-900'
@@ -256,19 +272,18 @@ const ShipmentTracking = () => {
                                                 <span className="text-[8px] font-black text-slate-300 mt-1 uppercase">Booked</span>
                                             </div>
 
-                                            {/* Step 2: Dispatched / Ongoing */}
+                                            {/* Step 2 Station Icon (Amber Orange Theme) */}
                                             <div className="flex flex-col items-center">
                                                 <div className={`w-7.5 h-7.5 rounded-xl flex items-center justify-center border transition-all duration-500 ${
-                                                    currentStep >= 2 ? 'bg-gradient-to-br from-cyan-500 to-blue-600 text-slate-950 border-cyan-300 shadow-[0_0_12px_rgba(34,211,238,0.4)]' : 'bg-slate-950 text-slate-600 border-slate-900'
+                                                    currentStep >= 2 ? 'bg-gradient-to-br from-amber-500 to-orange-600 text-white border-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.4)]' : 'bg-slate-950 text-slate-600 border-slate-900'
                                                 }`}>
-                                                    <Truck className="h-3.5 w-3.5" />
+                                                    <Navigation className="h-3.5 w-3.5" />
                                                 </div>
                                                 <span className="text-[8px] font-black text-slate-300 mt-1 uppercase">
                                                     {shipment.status === 'ON_GOING' ? 'On Going' : 'Dispatched'}
                                                 </span>
                                             </div>
 
-                                            {/* Step 3: Delivered */}
                                             <div className="flex flex-col items-center">
                                                 <div className={`w-7.5 h-7.5 rounded-xl flex items-center justify-center border transition-all duration-500 ${
                                                     currentStep === 3 ? 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white border-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.3)]' : 'bg-slate-950 text-slate-600 border-slate-900'
@@ -280,14 +295,12 @@ const ShipmentTracking = () => {
                                         </div>
                                     </div>
 
-                                    {/* Activity Log Timeline Section */}
                                     <div className="bg-slate-950/60 border border-slate-800/80 p-3 rounded-xl shadow-inner space-y-3">
                                         <h4 className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5 mb-1">
                                             <Calendar className="h-3.5 w-3.5 text-blue-400" /> Real-time Activity Log
                                         </h4>
 
                                         <div className="space-y-3 relative border-l border-slate-800 ml-1.5 pl-3.5 text-[10px]">
-                                            {/* Step 1 Log */}
                                             <div className="relative">
                                                 <span className={`absolute -left-[19px] top-0.5 w-2 h-2 rounded-full ${currentStep >= 1 ? 'bg-blue-400 shadow-[0_0_8px_rgba(59,130,246,0.8)]' : 'bg-slate-800'}`}></span>
                                                 <div className="flex justify-between items-start">
@@ -299,9 +312,8 @@ const ShipmentTracking = () => {
                                                 <p className="text-slate-500 text-[9px] mt-0.5">Order registered securely in the logistics framework matrix.</p>
                                             </div>
 
-                                            {/* Step 2 Log */}
                                             <div className="relative">
-                                                <span className={`absolute -left-[19px] top-0.5 w-2 h-2 rounded-full ${currentStep >= 2 ? 'bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]' : 'bg-slate-800'}`}></span>
+                                                <span className={`absolute -left-[19px] top-0.5 w-2 h-2 rounded-full ${currentStep >= 2 ? 'bg-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.8)]' : 'bg-slate-800'}`}></span>
                                                 <div className="flex justify-between items-start">
                                                     <span className={`font-semibold ${currentStep >= 2 ? 'text-slate-200' : 'text-slate-500'}`}>Dispatched & On Route</span>
                                                     <span className="text-slate-500 font-mono text-[9px]">
@@ -315,7 +327,6 @@ const ShipmentTracking = () => {
                                                 </p>
                                             </div>
 
-                                            {/* Step 3 Log */}
                                             <div className="relative">
                                                 <span className={`absolute -left-[19px] top-0.5 w-2 h-2 rounded-full ${currentStep === 3 ? 'bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.8)]' : 'bg-slate-800'}`}></span>
                                                 <div className="flex justify-between items-start">
@@ -332,7 +343,6 @@ const ShipmentTracking = () => {
                                     </div>
                                 </div>
 
-                                {/* Status Metrics Footer */}
                                 <div className="grid grid-cols-3 gap-2.5 pt-3 border-t border-slate-800/80 text-[10px]">
                                     <div className="bg-gradient-to-b from-slate-950/40 to-slate-950/80 p-2 rounded-lg border border-slate-800/60 flex items-center gap-2">
                                         <MapPin className="h-3.5 w-3.5 text-blue-400 shrink-0" />
@@ -360,11 +370,9 @@ const ShipmentTracking = () => {
                             </div>
                         )}
                     </div>
-
                 </div>
             </main>
 
-            {/* Footer */}
             <footer className="relative z-10 w-full border-t border-slate-900/60 bg-slate-950/90 backdrop-blur-md py-3 text-center text-[9px] text-slate-600 shrink-0">
                 &copy; {new Date().getFullYear()} LogixCore Systems
             </footer>
