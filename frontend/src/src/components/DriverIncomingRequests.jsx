@@ -27,11 +27,9 @@ const DriverIncomingRequests = ({ userId, showNotification, viewMode }) => {
         activeTripsRef.current = activeTrips;
     }, [activeTrips]);
 
-    // 💡 Robust Helper to extract trip ID properly from shipment object
     // 💡 Safely extract primary Trip ID without fallbacking directly to shipment.id
     const getTripIdFromShipment = (shipment) => {
         if (!shipment) return null;
-        // Strictly prioritize nested object or explicit trip_id fields
         return shipment.trip?.id || shipment.trip_id || shipment.tripId || null;
     };
 
@@ -80,6 +78,48 @@ const DriverIncomingRequests = ({ userId, showNotification, viewMode }) => {
             loadData();
         }
     }, [userId]);
+
+    // 📍 1️⃣ STRICT GEOFENCE HELPER: Early city updates fix karne ke liye
+    const getReadableLocation = (lat, lng, destCityName) => {
+        const CITIES = [
+            { name: 'Karachi', lat: 24.8607, lng: 67.0011 },
+            { name: 'Hyderabad', lat: 25.3960, lng: 68.3578 },
+            { name: 'Moro', lat: 26.6667, lng: 68.0000 },
+            { name: 'Khairpur', lat: 27.5295, lng: 68.7592 },
+            { name: 'Sukkur', lat: 27.7052, lng: 68.8574 },
+            { name: 'Multan', lat: 30.1575, lng: 71.5249 },
+            { name: 'Sahiwal', lat: 30.6682, lng: 73.1014 },
+            { name: 'Lahore', lat: 31.5204, lng: 74.3587 },
+            { name: 'Rawalpindi', lat: 33.5651, lng: 73.0169 },
+            { name: 'Islamabad', lat: 33.6844, lng: 73.0479 }
+        ];
+
+        // Strict Radius (~10km) - Exact city entering
+        for (let city of CITIES) {
+            const latDiff = Math.abs(lat - city.lat);
+            const lngDiff = Math.abs(lng - city.lng);
+
+            if (latDiff < 0.08 && lngDiff < 0.08) {
+                if (city.name.toLowerCase() === destCityName.toLowerCase()) {
+                    return `Arrived at Destination (${city.name})`;
+                }
+                return `Passing ${city.name}`;
+            }
+        }
+
+        // Highway Transit Radius Check (~20km)
+        for (let city of CITIES) {
+            const latDiff = Math.abs(lat - city.lat);
+            const lngDiff = Math.abs(lng - city.lng);
+
+            if (latDiff < 0.18 && lngDiff < 0.18) {
+                return `Near ${city.name} Highway`;
+            }
+        }
+
+        // Generic Highway Fallback
+        return `En Route via National Highway (N-5)`;
+    };
 
     // 🛰️ OSRM ROAD-BASED LIVE GPS SIMULATION
     useEffect(() => {
@@ -145,19 +185,20 @@ const DriverIncomingRequests = ({ userId, showNotification, viewMode }) => {
 
             let roadWaypoints = [];
 
-            // 🛣️ Protocol-agnostic OSRM fetch with fail-safe error handling
+            // 🛣️ 2️⃣ EXACT OSRM API SPEC: LNG Pehle, LAT Baad me + overview=full&steps=true
             try {
                 const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
-                const osrmUrl = `${protocol}//router.project-osrm.org/route/v1/driving/${startCoords.lng},${startCoords.lat};${targetCoords.lng},${targetCoords.lat}?overview=full&geometries=geojson`;
+                const osrmUrl = `${protocol}//router.project-osrm.org/route/v1/driving/${startCoords.lng},${startCoords.lat};${targetCoords.lng},${targetCoords.lat}?overview=full&geometries=geojson&steps=true`;
 
                 const response = await fetch(osrmUrl);
 
                 if (response.ok) {
                     const data = await response.json();
-                    if (data && data.routes && data.routes.length > 0 && data.routes[0].geometry?.coordinates) {
+                    // 3️⃣ GeoJSON array [lng, lat] ko Leaflet standard [lat, lng] me map karna
+                    if (data && data.code === 'Ok' && data.routes && data.routes.length > 0 && data.routes[0].geometry?.coordinates) {
                         roadWaypoints = data.routes[0].geometry.coordinates.map(coord => ({
-                            lat: coord[1],
-                            lng: coord[0]
+                            lat: Number(coord[1]), // Latitude
+                            lng: Number(coord[0])  // Longitude
                         }));
                     }
                 }
@@ -165,7 +206,7 @@ const DriverIncomingRequests = ({ userId, showNotification, viewMode }) => {
                 console.warn("⚠️ OSRM API unavailable. Falling back to smooth straight-line interpolation:", fetchErr);
             }
 
-            // 🛡SAFE FALLBACK: Generate 30 smooth intermediate points between Start and Destination
+            // 🛡 SAFE FALLBACK
             if (!roadWaypoints || roadWaypoints.length < 2) {
                 const fallbackSteps = 30;
                 roadWaypoints = [];
@@ -211,7 +252,6 @@ const DriverIncomingRequests = ({ userId, showNotification, viewMode }) => {
                     console.error("❌ Location simulation ping failed:", err);
                 }
 
-                // Check for last step completion accurately
                 if (currentStepIndex + stepSize >= totalPoints) {
                     clearInterval(simulationRef.current);
 
@@ -265,40 +305,6 @@ const DriverIncomingRequests = ({ userId, showNotification, viewMode }) => {
             if (simulationRef.current) clearInterval(simulationRef.current);
         };
     }, [activeTrips?.[0]?.id, activeTrips?.[0]?.status]);
-
-    // 📍 Geofence Helper to map Lat/Lng to Human Readable Locations
-    const getReadableLocation = (lat, lng, destCityName) => {
-        const CITIES = [
-            { name: 'Karachi', lat: 24.8607, lng: 67.0011 },
-            { name: 'Hyderabad', lat: 25.3960, lng: 68.3578 },
-            { name: 'Moro', lat: 26.6667, lng: 68.0000 },
-            { name: 'Khairpur', lat: 27.5295, lng: 68.7592 },
-            { name: 'Sukkur', lat: 27.7052, lng: 68.8574 },
-            { name: 'Multan', lat: 30.1575, lng: 71.5249 },
-            { name: 'Sahiwal', lat: 30.6682, lng: 73.1014 },
-            { name: 'Lahore', lat: 31.5204, lng: 74.3587 },
-            { name: 'Rawalpindi', lat: 33.5651, lng: 73.0169 },
-            { name: 'Islamabad', lat: 33.6844, lng: 73.0479 }
-        ];
-
-        for (let city of CITIES) {
-            const latDiff = Math.abs(lat - city.lat);
-            const lngDiff = Math.abs(lng - city.lng);
-
-            if (latDiff < 0.15 && lngDiff < 0.15) {
-                if (city.name.toLowerCase() === destCityName.toLowerCase()) {
-                    return `Arrived at Destination (${city.name})`;
-                }
-                return `At ${city.name}`;
-            }
-
-            if (latDiff < 0.35 && lngDiff < 0.35) {
-                return `Near ${city.name} Highway`;
-            }
-        }
-
-        return `En Route to ${destCityName}`;
-    };
 
     const handleDecision = async (shipmentId, action) => {
         try {

@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-// 1️⃣ Tooltip ko import me add kiya
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap, Tooltip } from 'react-leaflet';
 import L from 'leaflet';
 import API from '../services/api';
@@ -138,9 +137,10 @@ const LocationTracking = ({ tripId, destinationCity = "" }) => {
 
     useEffect(() => {
         fetchLocationHistory();
+        // 🔄 Polling interval synchronized with DriverIncomingRequests (4000ms)
         const pollInterval = setInterval(() => {
             fetchLocationHistory();
-        }, 3000);
+        }, 4000);
         return () => clearInterval(pollInterval);
     }, [tripId]);
 
@@ -216,15 +216,17 @@ const LocationTracking = ({ tripId, destinationCity = "" }) => {
                             </div>
                         </Popup>
 
-                        {/* 2️⃣ Hamesha visible rehta hua label add kiya */}
+                        {/* Always visible live location label */}
                         <Tooltip
-                            permanent // Hamesha dikhana hai
-                            direction="top" // Marker ke upar dikhana hai
-                            offset={[0, -40]} // Thora upar adjust karne ke liye
-                            className="bg-slate-900 border border-slate-700 text-white font-bold text-xs p-2 rounded-lg shadow-xl" // Styling
+                            permanent
+                            direction="top"
+                            offset={[0, -35]}
+                            opacity={1}
+                            interactive={false}
                         >
-                            {/* OSRM simulation se jo location name aarha hai (e.g., "Near Sukkur Highway") wo dikhayega */}
-                            {latestLocationDetails?.location || 'En Route'}
+                            <span className="font-sans font-semibold text-slate-900 text-xs">
+                                {latestLocationDetails?.location || 'En Route'}
+                            </span>
                         </Tooltip>
                     </Marker>
 
