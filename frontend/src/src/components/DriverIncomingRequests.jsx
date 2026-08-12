@@ -122,6 +122,7 @@ const DriverIncomingRequests = ({ userId, showNotification, viewMode }) => {
     };
 
     // 🛰️ OSRM ROAD-BASED LIVE GPS SIMULATION
+    // 🛰️ OSRM ROAD-BASED LIVE GPS SIMULATION WITH RESUME LOGIC
     useEffect(() => {
         if (!activeTrips || activeTrips.length === 0) {
             if (simulationRef.current) clearInterval(simulationRef.current);
@@ -185,7 +186,7 @@ const DriverIncomingRequests = ({ userId, showNotification, viewMode }) => {
 
             let roadWaypoints = [];
 
-            // 🛣️ OSRM API Call: LNG Pehle, LAT Baad me
+            // 🛣️ OSRM API Call
             try {
                 const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
                 const osrmUrl = `${protocol}//router.project-osrm.org/route/v1/driving/${startCoords.lng},${startCoords.lat};${targetCoords.lng},${targetCoords.lat}?overview=full&geometries=geojson&steps=true`;
@@ -196,8 +197,8 @@ const DriverIncomingRequests = ({ userId, showNotification, viewMode }) => {
                     const data = await response.json();
                     if (data && data.code === 'Ok' && data.routes && data.routes.length > 0 && data.routes[0].geometry?.coordinates) {
                         roadWaypoints = data.routes[0].geometry.coordinates.map(coord => ({
-                            lat: Number(coord[1]), // Latitude
-                            lng: Number(coord[0])  // Longitude
+                            lat: Number(coord[1]),
+                            lng: Number(coord[0])
                         }));
                     }
                 }
@@ -219,10 +220,41 @@ const DriverIncomingRequests = ({ userId, showNotification, viewMode }) => {
             }
 
             const totalPoints = roadWaypoints.length;
-            // 🎯 Step size adjustment: Keeps precision on turnings without cutting corners
-            const stepSize = 2;
+            const stepSize = 6;
+            let startingIndex = 0;
 
-            let currentStepIndex = 0;
+            // 🔄 FETCH LAST RECORDED LOCATION FROM BACKEND TO RESUME
+            try {
+                const historyRes = await locationService.getLocationHistory(validTripId); // Ya locationService.getTripHistory/api endpoint
+                const historyData = historyRes.data || historyRes;
+
+                if (Array.isArray(historyData) && historyData.length > 0) {
+                    const lastPing = historyData[historyData.length - 1];
+                    if (lastPing.latitude && lastPing.longitude) {
+                        const lastLat = Number(lastPing.latitude);
+                        const lastLng = Number(lastPing.longitude);
+
+                        // Find nearest waypoint index on route
+                        let minDistance = Infinity;
+                        let closestIdx = 0;
+
+                        roadWaypoints.forEach((wp, idx) => {
+                            const dist = Math.hypot(wp.lat - lastLat, wp.lng - lastLng);
+                            if (dist < minDistance) {
+                                minDistance = dist;
+                                closestIdx = idx;
+                            }
+                        });
+
+                        startingIndex = closestIdx;
+                        console.log(`📍 Resuming simulation from index ${startingIndex}/${totalPoints} for Trip #${validTripId}`);
+                    }
+                }
+            } catch (err) {
+                console.warn("Could not fetch last recorded location, starting from beginning:", err);
+            }
+
+            let currentStepIndex = startingIndex;
 
             simulationRef.current = setInterval(async () => {
                 if (currentStepIndex >= totalPoints) {

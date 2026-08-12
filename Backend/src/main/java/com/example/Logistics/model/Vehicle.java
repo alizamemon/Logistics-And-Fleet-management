@@ -28,4 +28,8 @@ public class Vehicle {
     @Column(nullable = false)
     private String status; //"AVAILABLE", "ON_TRIP", "MAINTENANCE"
 
+    @Lob
+    @Column(name = "blop", columnDefinition = "LONGTEXT")
+    private String blop;
+
 }

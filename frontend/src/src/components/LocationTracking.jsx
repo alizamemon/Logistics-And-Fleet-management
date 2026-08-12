@@ -14,13 +14,70 @@ L.Icon.Default.mergeOptions({
     shadowUrl: markerShadowPng,
 });
 
-// 🚚 Custom Truck Marker Icon
-const truckIcon = new L.Icon({
+// 🚚 Fallback Standard Truck Marker Icon
+const defaultTruckIcon = new L.Icon({
     iconUrl: markerIconPng,
     shadowUrl: markerShadowPng,
     iconSize: [28, 45],
     iconAnchor: [14, 45],
     popupAnchor: [0, -40]
+});
+
+// 🎨 Dynamic Base64 / Emoji / Custom Image Marker Generator (Using 'blop')
+const createCustomTruckIcon = (blop) => {
+    if (!blop) return defaultTruckIcon;
+
+    const isEmoji = !blop.startsWith('data:') && !blop.startsWith('http') && blop.length <= 4;
+
+    const innerContent = isEmoji
+        ? `<span style="font-size: 26px;">${blop}</span>`
+        : `<img src="${blop.startsWith('data:') ? blop : `data:image/png;base64,${blop}`}" style="width: 100%; height: 100%; object-fit: contain;" alt="Vehicle" />`;
+
+    return L.divIcon({
+        className: 'custom-vehicle-marker',
+        html: `
+            <div style="
+                width: 44px;
+                height: 44px;
+                border-radius: 50%;
+                background: white;
+                border: 2.5px solid #2563eb;
+                box-shadow: 0 0 12px rgba(0,0,0,0.35);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                overflow: hidden;
+            ">
+                ${innerContent}
+            </div>
+        `,
+        iconSize: [44, 44],
+        iconAnchor: [22, 22],
+        popupAnchor: [0, -22]
+    });
+};
+
+// 🟢 Source / Origin Hub Marker Icon
+const originIcon = L.divIcon({
+    className: 'custom-origin-marker',
+    html: `
+        <div style="
+            background-color: #10b981; 
+            width: 34px; 
+            height: 34px; 
+            border-radius: 50%; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            box-shadow: 0 0 12px rgba(16, 185, 129, 0.8);
+            border: 2px solid #ffffff;
+            font-size: 18px;
+        ">
+            🚀
+        </div>
+    `,
+    iconSize: [34, 34],
+    iconAnchor: [17, 17]
 });
 
 // 🏁 Destination Marker Icon
@@ -90,13 +147,40 @@ const DynamicMapUpdater = ({ center }) => {
     return null;
 };
 
-const LocationTracking = ({ tripId, destinationCity = "" }) => {
+// 📍 "Show Me Where I Am" Controller Component
+const RecenterButton = ({ location }) => {
+    const map = useMap();
+
+    const handleRecenter = () => {
+        if (location && location.length === 2) {
+            map.flyTo(location, 13, { animate: true, duration: 1.5 });
+        }
+    };
+
+    return (
+        <div className="leaflet-top leaflet-right" style={{ marginTop: '12px', marginRight: '12px', zIndex: 1000 }}>
+            <button
+                onClick={handleRecenter}
+                title="Show me where I am"
+                className="bg-slate-900/90 hover:bg-slate-800 text-white text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700/80 shadow-xl backdrop-blur-md flex items-center gap-2 transition-all active:scale-95"
+            >
+                <span className="text-base">🎯</span>
+                <span>Show me where I am</span>
+            </button>
+        </div>
+    );
+};
+
+const LocationTracking = ({ tripId, sourceCity = "Karachi", destinationCity = "" }) => {
     const [positions, setPositions] = useState([]);
     const [latestLocationDetails, setLatestLocationDetails] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    const cleanCityName = (destinationCity || '').toLowerCase().trim();
-    const destinationCoords = CITY_COORDINATES[cleanCityName] || CITY_COORDINATES['islamabad'];
+    const cleanSourceCity = (sourceCity || 'karachi').toLowerCase().trim();
+    const cleanDestCity = (destinationCity || '').toLowerCase().trim();
+
+    const originCoords = positions.length > 0 ? positions[0] : (CITY_COORDINATES[cleanSourceCity] || CITY_COORDINATES['karachi']);
+    const destinationCoords = CITY_COORDINATES[cleanDestCity] || CITY_COORDINATES['islamabad'];
 
     // 🛠 Safely extracts location text regardless of backend DTO naming
     const getLocationText = (locationObj) => {
@@ -137,7 +221,7 @@ const LocationTracking = ({ tripId, destinationCity = "" }) => {
         fetchLocationHistory();
         const pollInterval = setInterval(() => {
             fetchLocationHistory();
-        }, 4000);
+        }, 1500);
         return () => clearInterval(pollInterval);
     }, [tripId]);
 
@@ -146,6 +230,9 @@ const LocationTracking = ({ tripId, destinationCity = "" }) => {
         : [24.8607, 67.0011];
 
     const displayLocationName = getLocationText(latestLocationDetails);
+
+    // Extracting 'blop' string from backend DTO safely
+    const vehicleBlop = latestLocationDetails?.trip?.vehicle?.blop || latestLocationDetails?.vehicle?.blop;
 
     if (loading) {
         return (
@@ -195,6 +282,9 @@ const LocationTracking = ({ tripId, destinationCity = "" }) => {
 
                     <DynamicMapUpdater center={currentTruckLocation} />
 
+                    {/* 🎯 "Show Me Where I Am" Floating Action Button */}
+                    <RecenterButton location={currentTruckLocation} />
+
                     {/* Polyline: Direct path trail on map */}
                     {positions.length > 1 && (
                         <Polyline
@@ -205,8 +295,21 @@ const LocationTracking = ({ tripId, destinationCity = "" }) => {
                         />
                     )}
 
-                    {/* 🚚 Current Moving Truck Marker */}
-                    <Marker position={currentTruckLocation} icon={truckIcon}>
+                    {/* 🚀 Starting Point / Hub Origin Marker */}
+                    {originCoords && (
+                        <Marker position={originCoords} icon={originIcon}>
+                            <Popup>
+                                <div className="text-xs font-sans text-slate-900 space-y-1">
+                                    <p className="font-bold text-emerald-600 border-b pb-1">🚀 Origin Dispatch Hub</p>
+                                    <div><b>Source City:</b> {sourceCity || 'Origin Hub'}</div>
+                                    <div><b>Status:</b> Trip Departure Point</div>
+                                </div>
+                            </Popup>
+                        </Marker>
+                    )}
+
+                    {/* 🚚 Dynamic Custom Moving Vehicle Marker (Uses Database 'blop') */}
+                    <Marker position={currentTruckLocation} icon={createCustomTruckIcon(vehicleBlop)}>
                         <Popup>
                             <div className="text-xs font-sans text-slate-900 space-y-1">
                                 <p className="font-bold border-b pb-1 text-blue-600">🚚 Live Vehicle Location</p>
@@ -216,11 +319,11 @@ const LocationTracking = ({ tripId, destinationCity = "" }) => {
                             </div>
                         </Popup>
 
-                        {/* Always visible label above moving truck */}
+                        {/* Always visible label above moving vehicle */}
                         <Tooltip
                             permanent
                             direction="top"
-                            offset={[0, -40]}
+                            offset={[0, -25]}
                             opacity={0.95}
                             interactive={false}
                         >
