@@ -23,18 +23,23 @@ const defaultTruckIcon = new L.Icon({
     popupAnchor: [0, -40]
 });
 
-// 🎨 Dynamic Base64 / Emoji / Custom Image Marker Generator
+// 🎨 Custom Base64 / SVG / Image Marker Generator
 const createCustomTruckIcon = (blop) => {
-    if (!blop) return defaultTruckIcon;
+    if (!blop || typeof blop !== 'string') return defaultTruckIcon;
 
     const isEmoji = !blop.startsWith('data:') && !blop.startsWith('http') && blop.length <= 4;
 
+    let imgSrc = blop;
+    if (!isEmoji && !blop.startsWith('data:') && !blop.startsWith('http')) {
+        imgSrc = `data:image/png;base64,${blop}`;
+    }
+
     const innerContent = isEmoji
-        ? `<span style="font-size: 26px;">${blop}</span>`
-        : `<img src="${blop.startsWith('data:') ? blop : `data:image/png;base64,${blop}`}" style="width: 100%; height: 100%; object-fit: contain;" alt="Vehicle" />`;
+        ? `<span style="font-size: 24px; line-height: 1;">${blop}</span>`
+        : `<img src="${imgSrc}" style="width: 100%; height: 100%; object-fit: contain; display: block;" alt="Vehicle" />`;
 
     return L.divIcon({
-        className: 'custom-vehicle-marker',
+        className: 'custom-vehicle-marker-wrapper',
         html: `
             <div style="
                 width: 44px;
@@ -42,11 +47,13 @@ const createCustomTruckIcon = (blop) => {
                 border-radius: 50%;
                 background: #0f172a;
                 border: 2px solid #38bdf8;
-                box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+                box-shadow: 0 4px 14px rgba(0,0,0,0.5);
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 overflow: hidden;
+                padding: 4px;
+                box-sizing: border-box;
             ">
                 ${innerContent}
             </div>
@@ -138,7 +145,7 @@ const DynamicMapUpdater = ({ center }) => {
             const [lat, lng] = center;
             const prev = prevCenterRef.current;
             if (!prev || prev[0] !== lat || prev[1] !== lng) {
-                map.panTo([lat, lng], { animate: true, duration: 1.2 });
+                map.panTo([lat, lng], { animate: true, duration: 1.5 });
                 prevCenterRef.current = [lat, lng];
             }
         }
@@ -147,7 +154,7 @@ const DynamicMapUpdater = ({ center }) => {
     return null;
 };
 
-// 🛞 Steering Wheel Floating Recenter Button (No Blue Border)
+// 🛞 Floating Steering Wheel Recenter Button
 const RecenterButton = ({ location }) => {
     const map = useMap();
 
@@ -219,9 +226,10 @@ const LocationTracking = ({ tripId, sourceCity = "Karachi", destinationCity = ""
 
     useEffect(() => {
         fetchLocationHistory();
+        // ⏱️ 3000ms delay to stop fast bouncing & high network traffic
         const pollInterval = setInterval(() => {
             fetchLocationHistory();
-        }, 1500);
+        }, 3000);
         return () => clearInterval(pollInterval);
     }, [tripId]);
 
@@ -231,8 +239,13 @@ const LocationTracking = ({ tripId, sourceCity = "Karachi", destinationCity = ""
 
     const displayLocationName = getLocationText(latestLocationDetails);
 
-    // Safely extract blop
-    const vehicleBlop = latestLocationDetails?.trip?.vehicle?.blop || latestLocationDetails?.vehicle?.blop;
+    // 🔍 Multi-level safe extraction for vehicle blop
+    const vehicleBlop =
+        latestLocationDetails?.trip?.vehicle?.blop ||
+        latestLocationDetails?.vehicle?.blop ||
+        latestLocationDetails?.trip?.vehicle?.blob ||
+        latestLocationDetails?.vehicle?.blob ||
+        null;
 
     if (loading) {
         return (
@@ -281,8 +294,6 @@ const LocationTracking = ({ tripId, sourceCity = "Karachi", destinationCity = ""
                     />
 
                     <DynamicMapUpdater center={currentTruckLocation} />
-
-                    {/* 🛞 Floating Steering Wheel Focus Button */}
                     <RecenterButton location={currentTruckLocation} />
 
                     {/* Polyline Route Trail */}

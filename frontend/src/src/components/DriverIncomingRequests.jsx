@@ -217,8 +217,8 @@ const DriverIncomingRequests = ({ userId, showNotification, viewMode }) => {
 
             const totalPoints = roadWaypoints.length;
 
-            // 🚀 SPEED BOOST: Increased step size to 18 waypoints per tick
-            const stepSize = 18;
+            //  REALISTIC HIGHWAY SPEED: Small step jump (4 points) for route precision
+            const stepSize = 4;
             let startingIndex = 0;
 
             // 🔄 FETCH LAST RECORDED LOCATION FROM BACKEND TO RESUME
@@ -324,8 +324,8 @@ const DriverIncomingRequests = ({ userId, showNotification, viewMode }) => {
 
                 currentStepIndex += stepSize;
 
-                // ⏱️ TIMER ACCELERATION: 1500ms (1.5 seconds) interval delay
-            }, 1500);
+                // ⏱️ SMOOTH INTERVAL: 3000ms (3 seconds) delay for real-time tracking feel
+            }, 3000);
         };
 
         startRoadBasedJourney();
@@ -450,6 +450,7 @@ const DriverIncomingRequests = ({ userId, showNotification, viewMode }) => {
                                         <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl animate-fadeIn">
                                             <LocationTracking
                                                 tripId={expandedMapTripId}
+                                                sourceCity={activeTrips.find(t => getTripIdFromShipment(t) === expandedMapTripId)?.sourceCity || "Karachi"}
                                                 destinationCity={activeTrips.find(t => getTripIdFromShipment(t) === expandedMapTripId)?.deliveryCity}
                                             />
                                         </div>
@@ -589,6 +590,7 @@ const DriverIncomingRequests = ({ userId, showNotification, viewMode }) => {
             {isFuelModalOpen && (
                 <DriverFuelModal
                     tripId={selectedTripForFuel}
+                    isOpen={isFuelModalOpen}
                     onClose={() => setIsFuelModalOpen(false)}
                     showNotification={showNotification}
                 />
@@ -597,6 +599,7 @@ const DriverIncomingRequests = ({ userId, showNotification, viewMode }) => {
             {isIncidentModalOpen && (
                 <DriverIncidentModal
                     trip={selectedTripForIncident}
+                    isOpen={isIncidentModalOpen}
                     onClose={() => setIsIncidentModalOpen(false)}
                     showNotification={showNotification}
                 />
