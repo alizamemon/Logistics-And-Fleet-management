@@ -1,6 +1,5 @@
 import API from './api';
 
-// Simple Helper to format Date matching Java's @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
 const formatTimestampForJava = (date = new Date()) => {
     const pad = (num) => String(num).padStart(2, '0');
     const year = date.getFullYear();
@@ -13,6 +12,7 @@ const formatTimestampForJava = (date = new Date()) => {
 };
 
 export const locationService = {
+    // 1. Matches @PostMapping
     pushLiveLocation: async (locationPayload) => {
         try {
             const rawTripId = locationPayload?.trip?.id || locationPayload?.tripId;
@@ -22,20 +22,32 @@ export const locationService = {
                 latitude: Number(locationPayload.latitude),
                 longitude: Number(locationPayload.longitude),
                 location: String(locationPayload.location || 'In Transit'),
-                timestamp: formatTimestampForJava(new Date()), // 👈 Fixes @JsonFormat("yyyy-MM-dd HH:mm:ss")
+                timestamp: formatTimestampForJava(new Date()),
                 trip: {
-                    id: validTripId // 👈 Matches @ManyToOne JoinColumn(name = "trip_id")
+                    id: validTripId
                 }
             };
 
             const response = await API.post('/location-history', safePayload);
             return response.data;
         } catch (error) {
-            console.error("Error pushing live coordinate inside locationService:", error);
+            console.error("Error pushing live coordinate:", error);
             throw error;
         }
     },
 
+    // 2. Matches @GetMapping("/trip/{tripId}") -> Returns List<LocationsHistory>
+    getLocationHistory: async (tripId) => {
+        try {
+            const response = await API.get(`/location-history/trip/${tripId}`);
+            return response.data; // 👈 Directly return response.data (Array)
+        } catch (error) {
+            console.error("Error fetching trip location history:", error);
+            throw error;
+        }
+    },
+
+    // 3. Matches @GetMapping (Paged Response)
     getLocationHistoryLogs: async (page = 0, size = 10, tripId = '') => {
         let url = `/location-history?page=${page}&size=${size}`;
         if (tripId) {

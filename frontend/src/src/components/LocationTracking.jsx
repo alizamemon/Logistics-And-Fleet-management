@@ -23,7 +23,7 @@ const defaultTruckIcon = new L.Icon({
     popupAnchor: [0, -40]
 });
 
-// 🎨 Dynamic Base64 / Emoji / Custom Image Marker Generator (Using 'blop')
+// 🎨 Dynamic Base64 / Emoji / Custom Image Marker Generator
 const createCustomTruckIcon = (blop) => {
     if (!blop) return defaultTruckIcon;
 
@@ -40,9 +40,9 @@ const createCustomTruckIcon = (blop) => {
                 width: 44px;
                 height: 44px;
                 border-radius: 50%;
-                background: white;
-                border: 2.5px solid #2563eb;
-                box-shadow: 0 0 12px rgba(0,0,0,0.35);
+                background: #0f172a;
+                border: 2px solid #38bdf8;
+                box-shadow: 0 4px 14px rgba(0,0,0,0.4);
                 display: flex;
                 align-items: center;
                 justify-content: center;
@@ -134,7 +134,7 @@ const DynamicMapUpdater = ({ center }) => {
     const prevCenterRef = useRef(null);
 
     useEffect(() => {
-        if (center && center.length === 2) {
+        if (center && Array.isArray(center) && center.length === 2 && center[0] != null && center[1] != null) {
             const [lat, lng] = center;
             const prev = prevCenterRef.current;
             if (!prev || prev[0] !== lat || prev[1] !== lng) {
@@ -147,12 +147,12 @@ const DynamicMapUpdater = ({ center }) => {
     return null;
 };
 
-// 📍 "Show Me Where I Am" Controller Component
+// 🛞 Steering Wheel Floating Recenter Button (No Blue Border)
 const RecenterButton = ({ location }) => {
     const map = useMap();
 
     const handleRecenter = () => {
-        if (location && location.length === 2) {
+        if (location && Array.isArray(location) && location.length === 2) {
             map.flyTo(location, 13, { animate: true, duration: 1.5 });
         }
     };
@@ -161,11 +161,11 @@ const RecenterButton = ({ location }) => {
         <div className="leaflet-top leaflet-right" style={{ marginTop: '12px', marginRight: '12px', zIndex: 1000 }}>
             <button
                 onClick={handleRecenter}
-                title="Show me where I am"
-                className="bg-slate-900/90 hover:bg-slate-800 text-white text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700/80 shadow-xl backdrop-blur-md flex items-center gap-2 transition-all active:scale-95"
+                title="Focus vehicle location"
+                className="bg-slate-900/95 hover:bg-slate-800 text-white text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700/60 shadow-2xl backdrop-blur-md flex items-center gap-2 transition-all active:scale-95 cursor-pointer"
             >
-                <span className="text-base">🎯</span>
-                <span>Show me where I am</span>
+                <span className="text-base animate-spin" style={{ animationDuration: '8s' }}>🛞</span>
+                <span>Focus Vehicle</span>
             </button>
         </div>
     );
@@ -182,7 +182,7 @@ const LocationTracking = ({ tripId, sourceCity = "Karachi", destinationCity = ""
     const originCoords = positions.length > 0 ? positions[0] : (CITY_COORDINATES[cleanSourceCity] || CITY_COORDINATES['karachi']);
     const destinationCoords = CITY_COORDINATES[cleanDestCity] || CITY_COORDINATES['islamabad'];
 
-    // 🛠 Safely extracts location text regardless of backend DTO naming
+    // 🛠 Safely extracts location text
     const getLocationText = (locationObj) => {
         if (!locationObj) return 'En Route via Highway';
         return (
@@ -200,9 +200,9 @@ const LocationTracking = ({ tripId, sourceCity = "Karachi", destinationCity = ""
         }
         try {
             const response = await API.get(`/location-history/trip/${tripId}`);
-            if (Array.isArray(response.data) && response.data.length > 0) {
+            if (response && Array.isArray(response.data) && response.data.length > 0) {
                 const validCoordinates = response.data
-                    .filter(loc => loc.latitude != null && loc.longitude != null)
+                    .filter(loc => loc && loc.latitude != null && loc.longitude != null)
                     .map(loc => [Number(loc.latitude), Number(loc.longitude)]);
 
                 if (validCoordinates.length > 0) {
@@ -211,7 +211,7 @@ const LocationTracking = ({ tripId, sourceCity = "Karachi", destinationCity = ""
                 }
             }
         } catch (error) {
-            console.error("Error fetching location telemetry:", error);
+            console.warn("Location history fetch warning:", error?.message || error);
         } finally {
             setLoading(false);
         }
@@ -231,7 +231,7 @@ const LocationTracking = ({ tripId, sourceCity = "Karachi", destinationCity = ""
 
     const displayLocationName = getLocationText(latestLocationDetails);
 
-    // Extracting 'blop' string from backend DTO safely
+    // Safely extract blop
     const vehicleBlop = latestLocationDetails?.trip?.vehicle?.blop || latestLocationDetails?.vehicle?.blop;
 
     if (loading) {
@@ -282,10 +282,10 @@ const LocationTracking = ({ tripId, sourceCity = "Karachi", destinationCity = ""
 
                     <DynamicMapUpdater center={currentTruckLocation} />
 
-                    {/* 🎯 "Show Me Where I Am" Floating Action Button */}
+                    {/* 🛞 Floating Steering Wheel Focus Button */}
                     <RecenterButton location={currentTruckLocation} />
 
-                    {/* Polyline: Direct path trail on map */}
+                    {/* Polyline Route Trail */}
                     {positions.length > 1 && (
                         <Polyline
                             positions={positions}
@@ -295,20 +295,19 @@ const LocationTracking = ({ tripId, sourceCity = "Karachi", destinationCity = ""
                         />
                     )}
 
-                    {/* 🚀 Starting Point / Hub Origin Marker */}
+                    {/* 🚀 Starting Origin Hub */}
                     {originCoords && (
                         <Marker position={originCoords} icon={originIcon}>
                             <Popup>
                                 <div className="text-xs font-sans text-slate-900 space-y-1">
-                                    <p className="font-bold text-emerald-600 border-b pb-1">🚀 Origin Dispatch Hub</p>
+                                    <p className="font-bold text-emerald-600 border-b pb-1">🏁 Origin Dispatch Hub</p>
                                     <div><b>Source City:</b> {sourceCity || 'Origin Hub'}</div>
-                                    <div><b>Status:</b> Trip Departure Point</div>
                                 </div>
                             </Popup>
                         </Marker>
                     )}
 
-                    {/* 🚚 Dynamic Custom Moving Vehicle Marker (Uses Database 'blop') */}
+                    {/* 🚚 Moving Vehicle Marker */}
                     <Marker position={currentTruckLocation} icon={createCustomTruckIcon(vehicleBlop)}>
                         <Popup>
                             <div className="text-xs font-sans text-slate-900 space-y-1">
@@ -319,7 +318,6 @@ const LocationTracking = ({ tripId, sourceCity = "Karachi", destinationCity = ""
                             </div>
                         </Popup>
 
-                        {/* Always visible label above moving vehicle */}
                         <Tooltip
                             permanent
                             direction="top"
@@ -333,7 +331,7 @@ const LocationTracking = ({ tripId, sourceCity = "Karachi", destinationCity = ""
                         </Tooltip>
                     </Marker>
 
-                    {/* 🏁 Destination Endpoint Marker */}
+                    {/* 🏁 Destination Endpoint */}
                     {destinationCoords && (
                         <Marker position={destinationCoords} icon={destinationIcon}>
                             <Popup>

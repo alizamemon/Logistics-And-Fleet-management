@@ -79,7 +79,7 @@ const DriverIncomingRequests = ({ userId, showNotification, viewMode }) => {
         }
     }, [userId]);
 
-    // 📍 1️⃣ STRICT GEOFENCE HELPER: Early city updates fix karne ke liye
+    // 📍 GEOFENCE HELPER: Strict Radius for location names
     const getReadableLocation = (lat, lng, destCityName) => {
         const CITIES = [
             { name: 'Karachi', lat: 24.8607, lng: 67.0011 },
@@ -94,7 +94,6 @@ const DriverIncomingRequests = ({ userId, showNotification, viewMode }) => {
             { name: 'Islamabad', lat: 33.6844, lng: 73.0479 }
         ];
 
-        // Strict Radius (~10km) - Exact city entering
         for (let city of CITIES) {
             const latDiff = Math.abs(lat - city.lat);
             const lngDiff = Math.abs(lng - city.lng);
@@ -107,7 +106,6 @@ const DriverIncomingRequests = ({ userId, showNotification, viewMode }) => {
             }
         }
 
-        // Highway Transit Radius Check (~20km)
         for (let city of CITIES) {
             const latDiff = Math.abs(lat - city.lat);
             const lngDiff = Math.abs(lng - city.lng);
@@ -117,11 +115,9 @@ const DriverIncomingRequests = ({ userId, showNotification, viewMode }) => {
             }
         }
 
-        // Generic Highway Fallback
         return `En Route via National Highway (N-5)`;
     };
 
-    // 🛰️ OSRM ROAD-BASED LIVE GPS SIMULATION
     // 🛰️ OSRM ROAD-BASED LIVE GPS SIMULATION WITH RESUME LOGIC
     useEffect(() => {
         if (!activeTrips || activeTrips.length === 0) {
@@ -220,12 +216,14 @@ const DriverIncomingRequests = ({ userId, showNotification, viewMode }) => {
             }
 
             const totalPoints = roadWaypoints.length;
-            const stepSize = 6;
+
+            // 🚀 SPEED BOOST: Increased step size to 18 waypoints per tick
+            const stepSize = 18;
             let startingIndex = 0;
 
             // 🔄 FETCH LAST RECORDED LOCATION FROM BACKEND TO RESUME
             try {
-                const historyRes = await locationService.getLocationHistory(validTripId); // Ya locationService.getTripHistory/api endpoint
+                const historyRes = await locationService.getLocationHistory(validTripId);
                 const historyData = historyRes.data || historyRes;
 
                 if (Array.isArray(historyData) && historyData.length > 0) {
@@ -234,7 +232,6 @@ const DriverIncomingRequests = ({ userId, showNotification, viewMode }) => {
                         const lastLat = Number(lastPing.latitude);
                         const lastLng = Number(lastPing.longitude);
 
-                        // Find nearest waypoint index on route
                         let minDistance = Infinity;
                         let closestIdx = 0;
 
@@ -327,7 +324,8 @@ const DriverIncomingRequests = ({ userId, showNotification, viewMode }) => {
 
                 currentStepIndex += stepSize;
 
-            }, 4000);
+                // ⏱️ TIMER ACCELERATION: 1500ms (1.5 seconds) interval delay
+            }, 1500);
         };
 
         startRoadBasedJourney();
@@ -587,22 +585,22 @@ const DriverIncomingRequests = ({ userId, showNotification, viewMode }) => {
                 </>
             )}
 
-            <DriverFuelModal
-                tripId={selectedTripForFuel}
-                isOpen={isFuelModalOpen}
-                onClose={() => setIsFuelModalOpen(false)}
-                onSubmitSuccess={() => {
-                    showNotification("Fuel & Distance details recorded successfully!", "success");
-                    loadData();
-                }}
-            />
+            {/* Modals */}
+            {isFuelModalOpen && (
+                <DriverFuelModal
+                    tripId={selectedTripForFuel}
+                    onClose={() => setIsFuelModalOpen(false)}
+                    showNotification={showNotification}
+                />
+            )}
 
-            <DriverIncidentModal
-                trip={selectedTripForIncident}
-                isOpen={isIncidentModalOpen}
-                onClose={() => setIsIncidentModalOpen(false)}
-                showNotification={showNotification}
-            />
+            {isIncidentModalOpen && (
+                <DriverIncidentModal
+                    trip={selectedTripForIncident}
+                    onClose={() => setIsIncidentModalOpen(false)}
+                    showNotification={showNotification}
+                />
+            )}
         </div>
     );
 };
