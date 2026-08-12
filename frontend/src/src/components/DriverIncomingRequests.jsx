@@ -81,9 +81,9 @@ const DriverIncomingRequests = ({ userId, showNotification, viewMode }) => {
         }
     }, [userId]);
 
-    // 🛰️ DYNAMIC LIVE GPS LOCATION SIMULATION
+    // 🛰️ OSRM ROAD-BASED LIVE GPS SIMULATION
     useEffect(() => {
-        if (activeTrips.length === 0) {
+        if (!activeTrips || activeTrips.length === 0) {
             if (simulationRef.current) clearInterval(simulationRef.current);
             return;
         }
@@ -100,21 +100,20 @@ const DriverIncomingRequests = ({ userId, showNotification, viewMode }) => {
             clearInterval(simulationRef.current);
         }
 
-        const validTripId = getTripIdFromShipment(currentTrip);
+        const validTripId = getTripIdFromShipment(currentTrip) || currentTrip.id;
         if (!validTripId) {
             console.warn("⚠️ Cannot start GPS Simulation: No valid Trip ID associated with shipment", currentTrip);
             return;
         }
 
-        const startDynamicJourney = () => {
+        const startRoadBasedJourney = async () => {
             let startCoords = { lat: 24.8607, lng: 67.0011 };
-            let targetCoords = { lat: 33.6844, lng: 73.0479 }; // islamabad fallback
+            let targetCoords = { lat: 33.6844, lng: 73.0479 };
 
             const startCityName = currentTrip.sourceCity || 'Karachi';
-            const destCityName = currentTrip.deliveryCity || 'Islamabad';  // fallback
+            const destCityName = currentTrip.deliveryCity || 'Islamabad';
 
             const cityCoordinates = {
-                // Major Metros & Capital
                 'karachi': { lat: 24.8607, lng: 67.0011 },
                 'lahore': { lat: 31.5204, lng: 74.3587 },
                 'islamabad': { lat: 33.6844, lng: 73.0479 },
@@ -123,41 +122,19 @@ const DriverIncomingRequests = ({ userId, showNotification, viewMode }) => {
                 'multan': { lat: 30.1575, lng: 71.5249 },
                 'peshawar': { lat: 34.0151, lng: 71.5249 },
                 'quetta': { lat: 30.1798, lng: 66.9750 },
-
-                // Sindh Hubs & Transit Points
                 'hyderabad': { lat: 25.3960, lng: 68.3578 },
                 'khairpur': { lat: 27.5295, lng: 68.7592 },
                 'sukkur': { lat: 27.7052, lng: 68.8574 },
                 'moro': { lat: 26.6667, lng: 68.0000 },
                 'nawabshah': { lat: 26.2483, lng: 68.4096 },
                 'larkana': { lat: 27.5589, lng: 68.2120 },
-                'mirpurkhas': { lat: 25.5269, lng: 69.0111 },
-                'badin': { lat: 24.6559, lng: 68.8383 },
-                'ghotki': { lat: 28.0044, lng: 69.3162 },
-
-                // Punjab Hubs & Corridor Points
                 'sahiwal': { lat: 30.6682, lng: 73.1014 },
                 'gujranwala': { lat: 32.1617, lng: 74.1883 },
                 'sialkot': { lat: 32.4945, lng: 74.5229 },
                 'sargodha': { lat: 32.0836, lng: 72.6711 },
                 'bahawalpur': { lat: 29.3544, lng: 71.6911 },
                 'rahim yar khan': { lat: 28.4212, lng: 70.2989 },
-                'rahimyar khan': { lat: 28.4212, lng: 70.2989 },
-                'okara': { lat: 30.8100, lng: 73.4597 },
-                'jhelum': { lat: 32.9405, lng: 73.7276 },
-                'gujrat': { lat: 32.5742, lng: 74.0754 },
-
-                // KPK & Northern Points
-                'mardan': { lat: 34.1986, lng: 72.0404 },
-                'abbottabad': { lat: 34.1688, lng: 73.2215 },
-                'swat': { lat: 35.2227, lng: 72.4258 },
-                'mingora': { lat: 34.7717, lng: 72.3600 },
-                'nowshera': { lat: 34.0153, lng: 71.9747 },
-
-                // Balochistan Points
-                'gwadar': { lat: 25.1264, lng: 62.3225 },
-                'hub': { lat: 24.9018, lng: 66.8833 },
-                'khuzdar': { lat: 27.8164, lng: 66.6057 }
+                'rahimyar khan': { lat: 28.4212, lng: 70.2989 }
             };
 
             const cleanSource = startCityName.toLowerCase().trim();
@@ -166,38 +143,63 @@ const DriverIncomingRequests = ({ userId, showNotification, viewMode }) => {
             if (cityCoordinates[cleanSource]) startCoords = cityCoordinates[cleanSource];
             if (cityCoordinates[cleanDest]) targetCoords = cityCoordinates[cleanDest];
 
-            let currentPos = { ...startCoords };
+            let roadWaypoints = [];
+
+            // 🛣️ Protocol-agnostic OSRM fetch with fail-safe error handling
+            try {
+                const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
+                const osrmUrl = `${protocol}//router.project-osrm.org/route/v1/driving/${startCoords.lng},${startCoords.lat};${targetCoords.lng},${targetCoords.lat}?overview=full&geometries=geojson`;
+
+                const response = await fetch(osrmUrl);
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data && data.routes && data.routes.length > 0 && data.routes[0].geometry?.coordinates) {
+                        roadWaypoints = data.routes[0].geometry.coordinates.map(coord => ({
+                            lat: coord[1],
+                            lng: coord[0]
+                        }));
+                    }
+                }
+            } catch (fetchErr) {
+                console.warn("⚠️ OSRM API unavailable. Falling back to smooth straight-line interpolation:", fetchErr);
+            }
+
+            // 🛡SAFE FALLBACK: Generate 30 smooth intermediate points between Start and Destination
+            if (!roadWaypoints || roadWaypoints.length < 2) {
+                const fallbackSteps = 30;
+                roadWaypoints = [];
+                for (let i = 0; i <= fallbackSteps; i++) {
+                    const factor = i / fallbackSteps;
+                    roadWaypoints.push({
+                        lat: startCoords.lat + (targetCoords.lat - startCoords.lat) * factor,
+                        lng: startCoords.lng + (targetCoords.lng - startCoords.lng) * factor
+                    });
+                }
+            }
+
+            const totalPoints = roadWaypoints.length;
+            const maxSteps = 40;
+            const stepSize = Math.max(1, Math.floor(totalPoints / maxSteps));
+
+            let currentStepIndex = 0;
 
             simulationRef.current = setInterval(async () => {
-                let latDiff = targetCoords.lat - currentPos.lat;
-                let lngDiff = targetCoords.lng - currentPos.lng;
-
-                let step = 0.04;
-
-                if (Math.abs(latDiff) > step) {
-                    currentPos.lat += latDiff > 0 ? step : -step;
-                } else {
-                    currentPos.lat = targetCoords.lat;
+                if (currentStepIndex >= totalPoints) {
+                    clearInterval(simulationRef.current);
+                    return;
                 }
 
-                if (Math.abs(lngDiff) > step) {
-                    currentPos.lng += lngDiff > 0 ? step : -step;
-                } else {
-                    currentPos.lng = targetCoords.lng;
-                }
+                const currentPos = roadWaypoints[currentStepIndex];
+                if (!currentPos) return;
 
-                const dynamicLocationName = getReadableLocation(currentPos.lat, currentPos.lng, destCityName) || `En Route to ${destCityName}`;
+                const dynamicLocationName = getReadableLocation(currentPos.lat, currentPos.lng, destCityName) || `En Route via Highway to ${destCityName}`;
 
-                // 🕒 Standard ISO Format (Matches Spring Boot LocalDateTime ISO Parse)
-                // 🕒 Space formatted date string (Matches yyyy-MM-dd HH:mm:ss)
-                const formattedNow = new Date().toISOString().replace('T', ' ').split('.')[0];
-
-                // 📦 Standard Spring Boot Entity Payload
                 const payload = {
                     latitude: Number(currentPos.lat.toFixed(4)),
                     longitude: Number(currentPos.lng.toFixed(4)),
                     location: String(dynamicLocationName),
-                    timestamp: new Date().toISOString(), // Standard ISO String ("2026-07-23T16:40:00.000Z")
+                    timestamp: new Date().toISOString(),
                     trip: {
                         id: Number(validTripId)
                     }
@@ -205,23 +207,20 @@ const DriverIncomingRequests = ({ userId, showNotification, viewMode }) => {
 
                 try {
                     await locationService.pushLiveLocation(payload);
-                    console.log(`📡 GPS Ping sent for Trip #${validTripId}:`, payload.location);
                 } catch (err) {
                     console.error("❌ Location simulation ping failed:", err);
                 }
 
-                // 🏁 Destination Reached Logic
-                if (Math.abs(currentPos.lat - targetCoords.lat) < 0.001 && Math.abs(currentPos.lng - targetCoords.lng) < 0.001) {
+                // Check for last step completion accurately
+                if (currentStepIndex + stepSize >= totalPoints) {
                     clearInterval(simulationRef.current);
 
-                    // 🕒 Space formatted date string (Matches yyyy-MM-dd HH:mm:ss)
-                    const formattedArrivalNow = new Date().toISOString().replace('T', ' ').split('.')[0];
-
+                    const finalPos = roadWaypoints[totalPoints - 1];
                     const finalPayload = {
-                        latitude: Number(targetCoords.lat.toFixed(4)),
-                        longitude: Number(targetCoords.lng.toFixed(4)),
+                        latitude: Number(finalPos.lat.toFixed(4)),
+                        longitude: Number(finalPos.lng.toFixed(4)),
                         location: `Arrived at Destination (${destCityName})`,
-                        timestamp: new Date().toISOString(), // Standard ISO String
+                        timestamp: new Date().toISOString(),
                         trip: {
                             id: Number(validTripId)
                         }
@@ -255,15 +254,17 @@ const DriverIncomingRequests = ({ userId, showNotification, viewMode }) => {
                     }
                 }
 
+                currentStepIndex += stepSize;
+
             }, 4000);
         };
 
-        startDynamicJourney();
+        startRoadBasedJourney();
 
         return () => {
             if (simulationRef.current) clearInterval(simulationRef.current);
         };
-    }, [activeTrips.length]);
+    }, [activeTrips?.[0]?.id, activeTrips?.[0]?.status]);
 
     // 📍 Geofence Helper to map Lat/Lng to Human Readable Locations
     const getReadableLocation = (lat, lng, destCityName) => {

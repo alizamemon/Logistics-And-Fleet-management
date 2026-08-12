@@ -79,7 +79,7 @@ public class FuelLogService {
     // ⛽ Submit Driver Fuel Log (Main Method for Driver App)
     public FuelLog submitDriverFuelLog(Long tripId, double actualDistance, boolean refueled, Double litersFilled, String stationName, Double pricePerLiter) {
         
-        // 🎯 Direct trip search. Agar na mile (shipment ID case), to TripShipment join table se trip nikalen.
+        // Direct trip search. Agar na mile (shipment ID case), to TripShipment join table se trip nikalen.
         Trip trip = tripRepository.findById(tripId)
                 .orElseGet(() -> tripShipmentRepository.findByShipmentId(tripId)
                         .map(ts -> ts.getTrip())

@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
+// 1️⃣ Tooltip ko import me add kiya
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap, Tooltip } from 'react-leaflet';
 import L from 'leaflet';
 import API from '../services/api';
 import 'leaflet/dist/leaflet.css';
 
-// 🛑 Leaflet Default Asset Fix (Prevents Broken Marker Icons in Webpack/Vite)
+// 🛑 Leaflet Default Asset Fix
 import markerIconPng from 'leaflet/dist/images/marker-icon.png';
 import markerShadowPng from 'leaflet/dist/images/marker-shadow.png';
 
@@ -14,7 +15,7 @@ L.Icon.Default.mergeOptions({
     shadowUrl: markerShadowPng,
 });
 
-// 🚚 Truck Icon (Blue Marker)
+// 🚚 Truck Icon
 const truckIcon = new L.Icon({
     iconUrl: markerIconPng,
     shadowUrl: markerShadowPng,
@@ -23,7 +24,7 @@ const truckIcon = new L.Icon({
     popupAnchor: [1, -34]
 });
 
-// 🏁 Destination Icon (Custom Red Marker)
+// 🏁 Destination Icon
 const destinationIcon = L.divIcon({
     className: 'custom-destination-marker',
     html: `
@@ -46,9 +47,8 @@ const destinationIcon = L.divIcon({
     iconAnchor: [16, 16]
 });
 
-// 📍 City Lat/Lng lookup dictionary (100% Synchronized with Driver Incoming Simulation)
+// 📍 City Coordinates Dictionary
 const CITY_COORDINATES = {
-    // Major Metros & Capital
     'karachi': [24.8607, 67.0011],
     'lahore': [31.5204, 74.3587],
     'islamabad': [33.6844, 73.0479],
@@ -57,8 +57,6 @@ const CITY_COORDINATES = {
     'multan': [30.1575, 71.5249],
     'peshawar': [34.0151, 71.5249],
     'quetta': [30.1798, 66.9750],
-
-    // Sindh Hubs & Transit Points
     'hyderabad': [25.3960, 68.3578],
     'khairpur': [27.5295, 68.7592],
     'sukkur': [27.7052, 68.8574],
@@ -68,8 +66,6 @@ const CITY_COORDINATES = {
     'mirpurkhas': [25.5269, 69.0111],
     'badin': [24.6559, 68.8383],
     'ghotki': [28.0044, 69.3162],
-
-    // Punjab Hubs & Corridor Points
     'sahiwal': [30.6682, 73.1014],
     'gujranwala': [32.1617, 74.1883],
     'sialkot': [32.4945, 74.5229],
@@ -80,21 +76,17 @@ const CITY_COORDINATES = {
     'okara': [30.8100, 73.4597],
     'jhelum': [32.9405, 73.7276],
     'gujrat': [32.5742, 74.0754],
-
-    // KPK & Northern Points
     'mardan': [34.1986, 72.0404],
     'abbottabad': [34.1688, 73.2215],
     'swat': [35.2227, 72.4258],
     'mingora': [34.7717, 72.3600],
     'nowshera': [34.0153, 71.9747],
-
-    // Balochistan Points
     'gwadar': [25.1264, 62.3225],
     'hub': [24.9018, 66.8833],
     'khuzdar': [27.8164, 66.6057]
 };
 
-// 📍 Smooth Pan Helper: Only Pans if location actually changed
+// 📍 Smooth Pan Helper
 const DynamicMapUpdater = ({ center }) => {
     const map = useMap();
     const prevCenterRef = useRef(null);
@@ -103,8 +95,6 @@ const DynamicMapUpdater = ({ center }) => {
         if (center && center.length === 2) {
             const [lat, lng] = center;
             const prev = prevCenterRef.current;
-
-            // Only pan if coordinates actually change
             if (!prev || prev[0] !== lat || prev[1] !== lng) {
                 map.panTo([lat, lng], { animate: true, duration: 1.0 });
                 prevCenterRef.current = [lat, lng];
@@ -121,8 +111,6 @@ const LocationTracking = ({ tripId, destinationCity = "" }) => {
     const [loading, setLoading] = useState(true);
 
     const cleanCityName = (destinationCity || '').toLowerCase().trim();
-
-    // Dynamic destination resolution matching driver simulation
     const destinationCoords = CITY_COORDINATES[cleanCityName] || CITY_COORDINATES['islamabad'];
 
     const fetchLocationHistory = async () => {
@@ -130,16 +118,12 @@ const LocationTracking = ({ tripId, destinationCity = "" }) => {
             setLoading(false);
             return;
         }
-
         try {
             const response = await API.get(`/location-history/trip/${tripId}`);
-
             if (Array.isArray(response.data) && response.data.length > 0) {
-                // Sanitize and filter valid latitude and longitude values
                 const validCoordinates = response.data
                     .filter(loc => loc.latitude != null && loc.longitude != null)
                     .map(loc => [Number(loc.latitude), Number(loc.longitude)]);
-
                 if (validCoordinates.length > 0) {
                     setPositions(validCoordinates);
                     setLatestLocationDetails(response.data[response.data.length - 1]);
@@ -154,15 +138,12 @@ const LocationTracking = ({ tripId, destinationCity = "" }) => {
 
     useEffect(() => {
         fetchLocationHistory();
-
         const pollInterval = setInterval(() => {
             fetchLocationHistory();
-        }, 3000); // Polling reduced to 3s for smooth GPS feel
-
+        }, 3000);
         return () => clearInterval(pollInterval);
     }, [tripId]);
 
-    // Baseline Fallback position (Karachi) if backend hasn't pushed GPS coordinates yet
     const currentTruckLocation = positions.length > 0
         ? positions[positions.length - 1]
         : [24.8607, 67.0011];
@@ -213,10 +194,8 @@ const LocationTracking = ({ tripId, destinationCity = "" }) => {
                         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                     />
 
-                    {/* Smooth non-flickering pan */}
                     <DynamicMapUpdater center={currentTruckLocation} />
 
-                    {/* Polyline Route Trail */}
                     {positions.length > 1 && (
                         <Polyline
                             positions={positions}
@@ -236,6 +215,17 @@ const LocationTracking = ({ tripId, destinationCity = "" }) => {
                                 <div><b>Lng:</b> {currentTruckLocation[1]?.toFixed(4)}</div>
                             </div>
                         </Popup>
+
+                        {/* 2️⃣ Hamesha visible rehta hua label add kiya */}
+                        <Tooltip
+                            permanent // Hamesha dikhana hai
+                            direction="top" // Marker ke upar dikhana hai
+                            offset={[0, -40]} // Thora upar adjust karne ke liye
+                            className="bg-slate-900 border border-slate-700 text-white font-bold text-xs p-2 rounded-lg shadow-xl" // Styling
+                        >
+                            {/* OSRM simulation se jo location name aarha hai (e.g., "Near Sukkur Highway") wo dikhayega */}
+                            {latestLocationDetails?.location || 'En Route'}
+                        </Tooltip>
                     </Marker>
 
                     {/* 🏁 Destination Endpoint Marker */}
