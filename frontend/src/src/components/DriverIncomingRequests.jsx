@@ -185,7 +185,7 @@ const DriverIncomingRequests = ({ userId, showNotification, viewMode }) => {
 
             let roadWaypoints = [];
 
-            // 🛣️ 2️⃣ EXACT OSRM API SPEC: LNG Pehle, LAT Baad me + overview=full&steps=true
+            // 🛣️ OSRM API Call: LNG Pehle, LAT Baad me
             try {
                 const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
                 const osrmUrl = `${protocol}//router.project-osrm.org/route/v1/driving/${startCoords.lng},${startCoords.lat};${targetCoords.lng},${targetCoords.lat}?overview=full&geometries=geojson&steps=true`;
@@ -194,7 +194,6 @@ const DriverIncomingRequests = ({ userId, showNotification, viewMode }) => {
 
                 if (response.ok) {
                     const data = await response.json();
-                    // 3️⃣ GeoJSON array [lng, lat] ko Leaflet standard [lat, lng] me map karna
                     if (data && data.code === 'Ok' && data.routes && data.routes.length > 0 && data.routes[0].geometry?.coordinates) {
                         roadWaypoints = data.routes[0].geometry.coordinates.map(coord => ({
                             lat: Number(coord[1]), // Latitude
@@ -208,7 +207,7 @@ const DriverIncomingRequests = ({ userId, showNotification, viewMode }) => {
 
             // 🛡 SAFE FALLBACK
             if (!roadWaypoints || roadWaypoints.length < 2) {
-                const fallbackSteps = 30;
+                const fallbackSteps = 50;
                 roadWaypoints = [];
                 for (let i = 0; i <= fallbackSteps; i++) {
                     const factor = i / fallbackSteps;
@@ -220,8 +219,8 @@ const DriverIncomingRequests = ({ userId, showNotification, viewMode }) => {
             }
 
             const totalPoints = roadWaypoints.length;
-            const maxSteps = 40;
-            const stepSize = Math.max(1, Math.floor(totalPoints / maxSteps));
+            // 🎯 Step size adjustment: Keeps precision on turnings without cutting corners
+            const stepSize = 2;
 
             let currentStepIndex = 0;
 

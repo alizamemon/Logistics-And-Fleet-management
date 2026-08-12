@@ -14,36 +14,36 @@ L.Icon.Default.mergeOptions({
     shadowUrl: markerShadowPng,
 });
 
-// 🚚 Truck Icon
+// 🚚 Custom Truck Marker Icon
 const truckIcon = new L.Icon({
     iconUrl: markerIconPng,
     shadowUrl: markerShadowPng,
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
-    popupAnchor: [1, -34]
+    iconSize: [28, 45],
+    iconAnchor: [14, 45],
+    popupAnchor: [0, -40]
 });
 
-// 🏁 Destination Icon
+// 🏁 Destination Marker Icon
 const destinationIcon = L.divIcon({
     className: 'custom-destination-marker',
     html: `
         <div style="
             background-color: #ef4444; 
-            width: 32px; 
-            height: 32px; 
+            width: 34px; 
+            height: 34px; 
             border-radius: 50%; 
             display: flex; 
             align-items: center; 
             justify-content: center; 
             box-shadow: 0 0 12px rgba(239, 68, 68, 0.8);
             border: 2px solid #ffffff;
-            font-size: 16px;
+            font-size: 18px;
         ">
             🏁
         </div>
     `,
-    iconSize: [32, 32],
-    iconAnchor: [16, 16]
+    iconSize: [34, 34],
+    iconAnchor: [17, 17]
 });
 
 // 📍 City Coordinates Dictionary
@@ -62,30 +62,16 @@ const CITY_COORDINATES = {
     'moro': [26.6667, 68.0000],
     'nawabshah': [26.2483, 68.4096],
     'larkana': [27.5589, 68.2120],
-    'mirpurkhas': [25.5269, 69.0111],
-    'badin': [24.6559, 68.8383],
-    'ghotki': [28.0044, 69.3162],
     'sahiwal': [30.6682, 73.1014],
     'gujranwala': [32.1617, 74.1883],
     'sialkot': [32.4945, 74.5229],
     'sargodha': [32.0836, 72.6711],
     'bahawalpur': [29.3544, 71.6911],
     'rahim yar khan': [28.4212, 70.2989],
-    'rahimyar khan': [28.4212, 70.2989],
-    'okara': [30.8100, 73.4597],
-    'jhelum': [32.9405, 73.7276],
-    'gujrat': [32.5742, 74.0754],
-    'mardan': [34.1986, 72.0404],
-    'abbottabad': [34.1688, 73.2215],
-    'swat': [35.2227, 72.4258],
-    'mingora': [34.7717, 72.3600],
-    'nowshera': [34.0153, 71.9747],
-    'gwadar': [25.1264, 62.3225],
-    'hub': [24.9018, 66.8833],
-    'khuzdar': [27.8164, 66.6057]
+    'rahimyar khan': [28.4212, 70.2989]
 };
 
-// 📍 Smooth Pan Helper
+// 📍 Smooth Camera Pan Helper
 const DynamicMapUpdater = ({ center }) => {
     const map = useMap();
     const prevCenterRef = useRef(null);
@@ -95,7 +81,7 @@ const DynamicMapUpdater = ({ center }) => {
             const [lat, lng] = center;
             const prev = prevCenterRef.current;
             if (!prev || prev[0] !== lat || prev[1] !== lng) {
-                map.panTo([lat, lng], { animate: true, duration: 1.0 });
+                map.panTo([lat, lng], { animate: true, duration: 1.2 });
                 prevCenterRef.current = [lat, lng];
             }
         }
@@ -112,6 +98,17 @@ const LocationTracking = ({ tripId, destinationCity = "" }) => {
     const cleanCityName = (destinationCity || '').toLowerCase().trim();
     const destinationCoords = CITY_COORDINATES[cleanCityName] || CITY_COORDINATES['islamabad'];
 
+    // 🛠 Safely extracts location text regardless of backend DTO naming
+    const getLocationText = (locationObj) => {
+        if (!locationObj) return 'En Route via Highway';
+        return (
+            locationObj.location ||
+            locationObj.locationName ||
+            locationObj.address ||
+            `Lat: ${Number(locationObj.latitude)?.toFixed(3)}, Lng: ${Number(locationObj.longitude)?.toFixed(3)}`
+        );
+    };
+
     const fetchLocationHistory = async () => {
         if (!tripId) {
             setLoading(false);
@@ -123,13 +120,14 @@ const LocationTracking = ({ tripId, destinationCity = "" }) => {
                 const validCoordinates = response.data
                     .filter(loc => loc.latitude != null && loc.longitude != null)
                     .map(loc => [Number(loc.latitude), Number(loc.longitude)]);
+
                 if (validCoordinates.length > 0) {
                     setPositions(validCoordinates);
                     setLatestLocationDetails(response.data[response.data.length - 1]);
                 }
             }
         } catch (error) {
-            console.error("Error fetching path coordinates:", error);
+            console.error("Error fetching location telemetry:", error);
         } finally {
             setLoading(false);
         }
@@ -137,7 +135,6 @@ const LocationTracking = ({ tripId, destinationCity = "" }) => {
 
     useEffect(() => {
         fetchLocationHistory();
-        // 🔄 Polling interval synchronized with DriverIncomingRequests (4000ms)
         const pollInterval = setInterval(() => {
             fetchLocationHistory();
         }, 4000);
@@ -148,10 +145,12 @@ const LocationTracking = ({ tripId, destinationCity = "" }) => {
         ? positions[positions.length - 1]
         : [24.8607, 67.0011];
 
+    const displayLocationName = getLocationText(latestLocationDetails);
+
     if (loading) {
         return (
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center text-slate-400 font-medium animate-pulse">
-                📡 Establishing Satellite GPS Telemetry Link for Trip #{tripId || 'N/A'}...
+                📡 Establishing Live GPS Satellite Link for Trip #{tripId || 'N/A'}...
             </div>
         );
     }
@@ -167,23 +166,23 @@ const LocationTracking = ({ tripId, destinationCity = "" }) => {
                             Trip #{tripId}
                         </span>
                     </h3>
-                    <p className="text-xs text-emerald-400 animate-pulse mt-0.5 font-medium">
-                        ● Connected to GPS Satellites
-                        {latestLocationDetails?.location && ` • ${latestLocationDetails.location}`}
+                    <p className="text-xs text-emerald-400 animate-pulse mt-0.5 font-medium flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
+                        <span>{displayLocationName}</span>
                     </p>
                 </div>
                 <div className="text-right text-xs text-slate-400">
-                    <div>Total Logged Pings: <span className="text-white font-mono font-bold">{positions.length}</span></div>
+                    <div>Logged Telemetry Pings: <span className="text-white font-mono font-bold">{positions.length}</span></div>
                     {latestLocationDetails?.timestamp && (
                         <div className="text-[10px] text-slate-500 mt-0.5 font-mono">
-                            Last Ping: {new Date(latestLocationDetails.timestamp).toLocaleTimeString()}
+                            Updated: {new Date(latestLocationDetails.timestamp).toLocaleTimeString()}
                         </div>
                     )}
                 </div>
             </div>
 
             {/* Map Container */}
-            <div className="h-[450px] w-full rounded-2xl overflow-hidden border border-slate-800 shadow-2xl relative">
+            <div className="h-[460px] w-full rounded-2xl overflow-hidden border border-slate-800 shadow-2xl relative">
                 <MapContainer
                     center={currentTruckLocation}
                     zoom={7}
@@ -196,12 +195,13 @@ const LocationTracking = ({ tripId, destinationCity = "" }) => {
 
                     <DynamicMapUpdater center={currentTruckLocation} />
 
+                    {/* Polyline: Direct path trail on map */}
                     {positions.length > 1 && (
                         <Polyline
                             positions={positions}
-                            color="#3b82f6"
+                            color="#2563eb"
                             weight={5}
-                            opacity={0.85}
+                            opacity={0.8}
                         />
                     )}
 
@@ -209,23 +209,23 @@ const LocationTracking = ({ tripId, destinationCity = "" }) => {
                     <Marker position={currentTruckLocation} icon={truckIcon}>
                         <Popup>
                             <div className="text-xs font-sans text-slate-900 space-y-1">
-                                <p className="font-bold border-b pb-1 text-blue-600">🚚 Live Vehicle Position</p>
-                                <div><b>Status:</b> {latestLocationDetails?.location || 'In Transit'}</div>
-                                <div><b>Lat:</b> {currentTruckLocation[0]?.toFixed(4)}</div>
-                                <div><b>Lng:</b> {currentTruckLocation[1]?.toFixed(4)}</div>
+                                <p className="font-bold border-b pb-1 text-blue-600">🚚 Live Vehicle Location</p>
+                                <div><b>Current Location:</b> {displayLocationName}</div>
+                                <div><b>Latitude:</b> {currentTruckLocation[0]?.toFixed(4)}</div>
+                                <div><b>Longitude:</b> {currentTruckLocation[1]?.toFixed(4)}</div>
                             </div>
                         </Popup>
 
-                        {/* Always visible live location label */}
+                        {/* Always visible label above moving truck */}
                         <Tooltip
                             permanent
                             direction="top"
-                            offset={[0, -35]}
-                            opacity={1}
+                            offset={[0, -40]}
+                            opacity={0.95}
                             interactive={false}
                         >
-                            <span className="font-sans font-semibold text-slate-900 text-xs">
-                                {latestLocationDetails?.location || 'En Route'}
+                            <span className="font-sans font-bold text-slate-900 text-xs px-1">
+                                📍 {displayLocationName}
                             </span>
                         </Tooltip>
                     </Marker>
@@ -236,7 +236,7 @@ const LocationTracking = ({ tripId, destinationCity = "" }) => {
                             <Popup>
                                 <div className="text-xs font-sans text-slate-900 space-y-1">
                                     <p className="font-bold text-red-600 border-b pb-1">🏁 Target Destination</p>
-                                    <div><b>Target City:</b> {destinationCity || 'Target Hub'}</div>
+                                    <div><b>City:</b> {destinationCity || 'Destination Target'}</div>
                                 </div>
                             </Popup>
                         </Marker>
