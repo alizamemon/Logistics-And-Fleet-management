@@ -14,17 +14,21 @@ L.Icon.Default.mergeOptions({
     shadowUrl: markerShadowPng,
 });
 
-// 🚚 Fallback Truck SVG (Data URL) agar Backend se Blop na mile
+// 🚚 Fallback Truck SVG (Data URL)
 const defaultTruckSvg = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%2338bdf8"><path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zM6 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm13.5-9l1.96 2.5H17V9.5h2.5zm-1.5 9c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>`;
 
-// 🎨 Custom Base64 / SVG / Image Marker Generator
+// 🎨 Custom Base64 Marker Generator (Safe Extraction)
 const createCustomTruckIcon = (blop) => {
-    let imgSrc = (blop && typeof blop === 'string' && blop.trim().length > 10)
-        ? blop.trim()
-        : defaultTruckSvg;
+    let imgSrc = defaultTruckSvg;
 
-    if (!imgSrc.startsWith('data:') && !imgSrc.startsWith('http')) {
-        imgSrc = `data:image/svg+xml;base64,${imgSrc}`;
+    if (blop && typeof blop === 'string' && blop.trim().length > 20 && !blop.includes('[object')) {
+        imgSrc = blop.trim();
+        if (imgSrc.startsWith('data:image/svg+xml;base64,')) {
+            const base64Part = imgSrc.replace('data:image/svg+xml;base64,', '').replace(/ /g, '+');
+            imgSrc = `data:image/svg+xml;base64,${base64Part}`;
+        } else if (!imgSrc.startsWith('data:') && !imgSrc.startsWith('http')) {
+            imgSrc = `data:image/svg+xml;base64,${imgSrc.replace(/ /g, '+')}`;
+        }
     }
 
     return L.divIcon({
@@ -53,7 +57,6 @@ const createCustomTruckIcon = (blop) => {
     });
 };
 
-// 🟢 Starting / Origin Hub Marker Icon (Green Circle with Flag 🚩)
 const originIcon = L.divIcon({
     className: 'custom-origin-marker',
     html: `
@@ -76,7 +79,6 @@ const originIcon = L.divIcon({
     iconAnchor: [19, 19]
 });
 
-// 🏁 Destination Marker Icon (Red Circle with Finish Flag 🏁)
 const destinationIcon = L.divIcon({
     className: 'custom-destination-marker',
     html: `
@@ -99,7 +101,6 @@ const destinationIcon = L.divIcon({
     iconAnchor: [19, 19]
 });
 
-// 📍 City Coordinates Dictionary
 const CITY_COORDINATES = {
     'karachi': [24.8607, 67.0011],
     'lahore': [31.5204, 74.3587],
@@ -124,27 +125,27 @@ const CITY_COORDINATES = {
     'rahimyar khan': [28.4212, 70.2989]
 };
 
-// ✴ Dynamic Target Focus Button Component
+// ✴ Recenter / Star Focus Button (Pure Tailwind CSS)
 const RecenterButton = ({ location }) => {
     const map = useMap();
 
-    const handleRecenter = () => {
-        if (location && Array.isArray(location) && location.length === 2) {
-            // Smoothly fly to current vehicle location and set zoom to level 14
-            map.flyTo(location, 14, {
-                animate: true,
-                duration: 1.5
-            });
+    const handleRecenter = (e) => {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        if (location && Array.isArray(location) && location.length === 2 && location[0] != null && location[1] != null) {
+            map.flyTo(location, 14, { animate: true, duration: 1.2 });
         }
     };
 
     return (
-        <div className="leaflet-top leaflet-right" style={{ marginTop: '12px', marginRight: '12px', zIndex: 1000 }}>
+        <div className="absolute top-4 right-4 z-[1000]">
             <button
                 type="button"
                 onClick={handleRecenter}
                 title="Focus Active Vehicle Location"
-                className="bg-slate-900/90 hover:bg-slate-800 text-amber-400 p-2.5 rounded-full border border-slate-700/80 shadow-2xl backdrop-blur-md flex items-center justify-center transition-all active:scale-90 cursor-pointer text-xl leading-none"
+                className="w-11 h-11 rounded-full bg-slate-900 hover:bg-slate-800 text-amber-400 border border-slate-700 shadow-2xl flex items-center justify-center text-xl cursor-pointer active:scale-95 transition-all"
             >
                 ✴
             </button>
@@ -191,15 +192,14 @@ const LocationTracking = ({ tripId, sourceCity = "Karachi", destinationCity = ""
                     const latest = response.data[response.data.length - 1];
                     setLatestLocationDetails(latest);
 
-                    const extractedBlop =
+                    const rawBlop =
                         latest?.trip?.vehicle?.blop ||
                         latest?.trip?.vehicle?.blob ||
                         latest?.vehicle?.blop ||
-                        latest?.vehicle?.blob ||
-                        latest?.trip?.vehicle?.image;
+                        latest?.vehicle?.blob;
 
-                    if (extractedBlop) {
-                        setVehicleBlop(extractedBlop);
+                    if (typeof rawBlop === 'string') {
+                        setVehicleBlop(rawBlop);
                     }
                 }
             }
@@ -208,9 +208,9 @@ const LocationTracking = ({ tripId, sourceCity = "Karachi", destinationCity = ""
                 try {
                     const tripRes = await API.get(`/trip/${tripId}`);
                     const directBlop = tripRes?.data?.vehicle?.blop || tripRes?.data?.vehicle?.blob;
-                    if (directBlop) setVehicleBlop(directBlop);
+                    if (typeof directBlop === 'string') setVehicleBlop(directBlop);
                 } catch (e) {
-                    // Ignore fallback catch
+                    // Fallback
                 }
             }
 
@@ -229,7 +229,6 @@ const LocationTracking = ({ tripId, sourceCity = "Karachi", destinationCity = ""
         return () => clearInterval(pollInterval);
     }, [tripId]);
 
-    // Compute exact active vehicle location dynamically
     const currentTruckLocation = positions.length > 0
         ? positions[positions.length - 1]
         : originCoords;
@@ -280,7 +279,6 @@ const LocationTracking = ({ tripId, sourceCity = "Karachi", destinationCity = ""
                         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                     />
 
-                    {/* ✴ Recenter Button - Current Active Coordinates Target Karega */}
                     <RecenterButton location={currentTruckLocation} />
 
                     {positions.length > 1 && (
