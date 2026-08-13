@@ -14,20 +14,32 @@ L.Icon.Default.mergeOptions({
     shadowUrl: markerShadowPng,
 });
 
-// 🚚 Fallback Truck SVG (Data URL)
-const defaultTruckSvg = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%2338bdf8"><path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zM6 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm13.5-9l1.96 2.5H17V9.5h2.5zm-1.5 9c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>`;
+// 🚚 Fallback Standard Truck SVG
+const defaultTruckSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#38bdf8" width="100%" height="100%"><path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zM6 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm13.5-9l1.96 2.5H17V9.5h2.5zm-1.5 9c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>`;
 
-// 🎨 Custom Base64 Marker Generator (Safe Extraction)
+// 🎨 Safe Base64 & SVG Parsing Marker Generator
 const createCustomTruckIcon = (blop) => {
-    let imgSrc = defaultTruckSvg;
+    let svgContent = defaultTruckSvg;
 
-    if (blop && typeof blop === 'string' && blop.trim().length > 20 && !blop.includes('[object')) {
-        imgSrc = blop.trim();
-        if (imgSrc.startsWith('data:image/svg+xml;base64,')) {
-            const base64Part = imgSrc.replace('data:image/svg+xml;base64,', '').replace(/ /g, '+');
-            imgSrc = `data:image/svg+xml;base64,${base64Part}`;
-        } else if (!imgSrc.startsWith('data:') && !imgSrc.startsWith('http')) {
-            imgSrc = `data:image/svg+xml;base64,${imgSrc.replace(/ /g, '+')}`;
+    if (blop && typeof blop === 'string' && blop.trim().length > 10) {
+        let cleanData = blop.trim();
+
+        // Agar raw base64 data hai
+        if (cleanData.includes('base64,')) {
+            cleanData = cleanData.split('base64,')[1];
+        }
+
+        try {
+            // Base64 ko safe SVG XML string mein convert karna
+            const decoded = window.atob(cleanData.replace(/ /g, '+'));
+            if (decoded && decoded.includes('<svg')) {
+                svgContent = decoded;
+            }
+        } catch (e) {
+            // Decoding fallback: Direct image URL or base64 data tag
+            if (blop.startsWith('data:image') || blop.startsWith('http')) {
+                svgContent = `<img src="${blop}" style="width:100%;height:100%;object-fit:contain;" alt="vehicle"/>`;
+            }
         }
     }
 
@@ -48,7 +60,7 @@ const createCustomTruckIcon = (blop) => {
                 padding: 6px;
                 box-sizing: border-box;
             ">
-                <img src="${imgSrc}" style="width: 100%; height: 100%; object-fit: contain; display: block;" alt="Vehicle" />
+                ${svgContent}
             </div>
         `,
         iconSize: [48, 48],
@@ -71,9 +83,7 @@ const originIcon = L.divIcon({
             box-shadow: 0 0 14px rgba(16, 185, 129, 0.9);
             border: 3px solid #ffffff;
             font-size: 20px;
-        ">
-            🚩
-        </div>
+        ">🚩</div>
     `,
     iconSize: [38, 38],
     iconAnchor: [19, 19]
@@ -93,9 +103,7 @@ const destinationIcon = L.divIcon({
             box-shadow: 0 0 14px rgba(239, 68, 68, 0.9);
             border: 3px solid #ffffff;
             font-size: 20px;
-        ">
-            🏁
-        </div>
+        ">🏁</div>
     `,
     iconSize: [38, 38],
     iconAnchor: [19, 19]
@@ -125,22 +133,27 @@ const CITY_COORDINATES = {
     'rahimyar khan': [28.4212, 70.2989]
 };
 
-// ✴ Recenter / Star Focus Button (Pure Tailwind CSS)
+// ✴ Guaranteed Working Recenter Controller
 const RecenterButton = ({ location }) => {
     const map = useMap();
 
     const handleRecenter = (e) => {
         if (e) {
-            e.preventDefault();
             e.stopPropagation();
+            e.preventDefault();
         }
-        if (location && Array.isArray(location) && location.length === 2 && location[0] != null && location[1] != null) {
-            map.flyTo(location, 14, { animate: true, duration: 1.2 });
+        if (location && Array.isArray(location) && location[0] && location[1]) {
+            map.flyTo(location, 13, { animate: true, duration: 1.2 });
         }
     };
 
     return (
-        <div className="absolute top-4 right-4 z-[1000]">
+        <div
+            className="leaflet-top leaflet-right"
+            style={{ pointerEvents: 'auto', zIndex: 1000, margin: '12px' }}
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+        >
             <button
                 type="button"
                 onClick={handleRecenter}

@@ -46,7 +46,7 @@ public ResponseEntity<?> addLocationLog(@RequestBody LocationsHistory log) {
         return ResponseEntity.ok(logsPage);
     }
 
-    // Read by Trip ID (Unpaged)
+    // Read by Trip ID
     @GetMapping("/trip/{tripId}")
     public ResponseEntity<List<LocationsHistory>> getHistoryByTripId(@PathVariable Long tripId) {
         List<LocationsHistory> tripHistory = locationsHistoryService.getHistoryByTripId(tripId);
