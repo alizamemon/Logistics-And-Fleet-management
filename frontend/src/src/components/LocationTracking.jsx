@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap, Tooltip } from 'react-leaflet';
 import L from 'leaflet';
 import API from '../services/api';
@@ -14,22 +14,15 @@ L.Icon.Default.mergeOptions({
     shadowUrl: markerShadowPng,
 });
 
-// 🚚 Fallback Standard Truck Marker Icon
-const defaultTruckIcon = new L.Icon({
-    iconUrl: markerIconPng,
-    shadowUrl: markerShadowPng,
-    iconSize: [28, 45],
-    iconAnchor: [14, 45],
-    popupAnchor: [0, -40]
-});
+// 🚚 Fallback Truck SVG (Data URL) agar Backend se Blop na mile
+const defaultTruckSvg = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%2338bdf8"><path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zM6 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm13.5-9l1.96 2.5H17V9.5h2.5zm-1.5 9c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>`;
 
 // 🎨 Custom Base64 / SVG / Image Marker Generator
 const createCustomTruckIcon = (blop) => {
-    if (!blop || typeof blop !== 'string') return defaultTruckIcon;
+    let imgSrc = (blop && typeof blop === 'string' && blop.trim().length > 10)
+        ? blop.trim()
+        : defaultTruckSvg;
 
-    let imgSrc = blop.trim();
-
-    // Ensure valid Data URL format
     if (!imgSrc.startsWith('data:') && !imgSrc.startsWith('http')) {
         imgSrc = `data:image/svg+xml;base64,${imgSrc}`;
     }
@@ -38,12 +31,12 @@ const createCustomTruckIcon = (blop) => {
         className: 'custom-vehicle-marker-wrapper',
         html: `
             <div style="
-                width: 46px;
-                height: 46px;
+                width: 48px;
+                height: 48px;
                 border-radius: 50%;
                 background: #0f172a;
                 border: 3px solid #38bdf8;
-                box-shadow: 0 4px 14px rgba(0,0,0,0.6);
+                box-shadow: 0 4px 14px rgba(0,0,0,0.7);
                 display: flex;
                 align-items: center;
                 justify-content: center;
@@ -54,9 +47,9 @@ const createCustomTruckIcon = (blop) => {
                 <img src="${imgSrc}" style="width: 100%; height: 100%; object-fit: contain; display: block;" alt="Vehicle" />
             </div>
         `,
-        iconSize: [46, 46],
-        iconAnchor: [23, 23],
-        popupAnchor: [0, -23]
+        iconSize: [48, 48],
+        iconAnchor: [24, 24],
+        popupAnchor: [0, -24]
     });
 };
 
@@ -131,22 +124,27 @@ const CITY_COORDINATES = {
     'rahimyar khan': [28.4212, 70.2989]
 };
 
-// ✴ Floating Recenter Icon Action Button
+// ✴ Dynamic Target Focus Button Component
 const RecenterButton = ({ location }) => {
     const map = useMap();
 
     const handleRecenter = () => {
         if (location && Array.isArray(location) && location.length === 2) {
-            map.flyTo(location, 13, { animate: true, duration: 1.5 });
+            // Smoothly fly to current vehicle location and set zoom to level 14
+            map.flyTo(location, 14, {
+                animate: true,
+                duration: 1.5
+            });
         }
     };
 
     return (
         <div className="leaflet-top leaflet-right" style={{ marginTop: '12px', marginRight: '12px', zIndex: 1000 }}>
             <button
+                type="button"
                 onClick={handleRecenter}
-                title="Focus vehicle location"
-                className="bg-slate-900/90 hover:bg-slate-800 text-amber-400 p-2.5 rounded-full border border-slate-700/80 shadow-2xl backdrop-blur-md flex items-center justify-center transition-all active:scale-90 cursor-pointer text-lg leading-none"
+                title="Focus Active Vehicle Location"
+                className="bg-slate-900/90 hover:bg-slate-800 text-amber-400 p-2.5 rounded-full border border-slate-700/80 shadow-2xl backdrop-blur-md flex items-center justify-center transition-all active:scale-90 cursor-pointer text-xl leading-none"
             >
                 ✴
             </button>
@@ -157,6 +155,7 @@ const RecenterButton = ({ location }) => {
 const LocationTracking = ({ tripId, sourceCity = "Karachi", destinationCity = "" }) => {
     const [positions, setPositions] = useState([]);
     const [latestLocationDetails, setLatestLocationDetails] = useState(null);
+    const [vehicleBlop, setVehicleBlop] = useState(null);
     const [loading, setLoading] = useState(true);
 
     const cleanSourceCity = (sourceCity || 'karachi').toLowerCase().trim();
@@ -165,7 +164,6 @@ const LocationTracking = ({ tripId, sourceCity = "Karachi", destinationCity = ""
     const originCoords = positions.length > 0 ? positions[0] : (CITY_COORDINATES[cleanSourceCity] || CITY_COORDINATES['karachi']);
     const destinationCoords = CITY_COORDINATES[cleanDestCity] || CITY_COORDINATES['islamabad'];
 
-    // 🛠 Safely extracts location text
     const getLocationText = (locationObj) => {
         if (!locationObj) return 'En Route via Highway';
         return (
@@ -190,9 +188,32 @@ const LocationTracking = ({ tripId, sourceCity = "Karachi", destinationCity = ""
 
                 if (validCoordinates.length > 0) {
                     setPositions(validCoordinates);
-                    setLatestLocationDetails(response.data[response.data.length - 1]);
+                    const latest = response.data[response.data.length - 1];
+                    setLatestLocationDetails(latest);
+
+                    const extractedBlop =
+                        latest?.trip?.vehicle?.blop ||
+                        latest?.trip?.vehicle?.blob ||
+                        latest?.vehicle?.blop ||
+                        latest?.vehicle?.blob ||
+                        latest?.trip?.vehicle?.image;
+
+                    if (extractedBlop) {
+                        setVehicleBlop(extractedBlop);
+                    }
                 }
             }
+
+            if (!vehicleBlop) {
+                try {
+                    const tripRes = await API.get(`/trip/${tripId}`);
+                    const directBlop = tripRes?.data?.vehicle?.blop || tripRes?.data?.vehicle?.blob;
+                    if (directBlop) setVehicleBlop(directBlop);
+                } catch (e) {
+                    // Ignore fallback catch
+                }
+            }
+
         } catch (error) {
             console.warn("Location history fetch warning:", error?.message || error);
         } finally {
@@ -208,20 +229,12 @@ const LocationTracking = ({ tripId, sourceCity = "Karachi", destinationCity = ""
         return () => clearInterval(pollInterval);
     }, [tripId]);
 
+    // Compute exact active vehicle location dynamically
     const currentTruckLocation = positions.length > 0
         ? positions[positions.length - 1]
-        : [24.8607, 67.0011];
+        : originCoords;
 
     const displayLocationName = getLocationText(latestLocationDetails);
-
-    // 🔍 Deep extraction for vehicle blop from all possible JSON nesting paths
-    const vehicleBlop =
-        latestLocationDetails?.trip?.vehicle?.blop ||
-        latestLocationDetails?.trip?.vehicle?.blob ||
-        latestLocationDetails?.vehicle?.blop ||
-        latestLocationDetails?.vehicle?.blob ||
-        latestLocationDetails?.trip?.vehicle?.image ||
-        null;
 
     if (loading) {
         return (
@@ -233,7 +246,6 @@ const LocationTracking = ({ tripId, sourceCity = "Karachi", destinationCity = ""
 
     return (
         <div className="space-y-4">
-            {/* Live Telemetry Status Header */}
             <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex justify-between items-center shadow-lg">
                 <div>
                     <h3 className="text-white font-bold text-sm flex items-center gap-2">
@@ -257,11 +269,10 @@ const LocationTracking = ({ tripId, sourceCity = "Karachi", destinationCity = ""
                 </div>
             </div>
 
-            {/* Map Container */}
             <div className="h-[460px] w-full rounded-2xl overflow-hidden border border-slate-800 shadow-2xl relative">
                 <MapContainer
                     center={currentTruckLocation}
-                    zoom={7}
+                    zoom={12}
                     style={{ height: '100%', width: '100%' }}
                 >
                     <TileLayer
@@ -269,9 +280,9 @@ const LocationTracking = ({ tripId, sourceCity = "Karachi", destinationCity = ""
                         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                     />
 
+                    {/* ✴ Recenter Button - Current Active Coordinates Target Karega */}
                     <RecenterButton location={currentTruckLocation} />
 
-                    {/* Polyline Route Trail */}
                     {positions.length > 1 && (
                         <Polyline
                             positions={positions}
@@ -281,7 +292,6 @@ const LocationTracking = ({ tripId, sourceCity = "Karachi", destinationCity = ""
                         />
                     )}
 
-                    {/* 🟢 Starting Origin Hub with Flag 🚩 */}
                     {originCoords && (
                         <Marker position={originCoords} icon={originIcon}>
                             <Popup>
@@ -293,7 +303,6 @@ const LocationTracking = ({ tripId, sourceCity = "Karachi", destinationCity = ""
                         </Marker>
                     )}
 
-                    {/* 🚚 Moving Vehicle Marker with Custom Base64 SVG Icon */}
                     <Marker position={currentTruckLocation} icon={createCustomTruckIcon(vehicleBlop)}>
                         <Popup>
                             <div className="text-xs font-sans text-slate-900 space-y-1">
@@ -317,7 +326,6 @@ const LocationTracking = ({ tripId, sourceCity = "Karachi", destinationCity = ""
                         </Tooltip>
                     </Marker>
 
-                    {/* 🏁 Destination Endpoint */}
                     {destinationCoords && (
                         <Marker position={destinationCoords} icon={destinationIcon}>
                             <Popup>

@@ -1,10 +1,11 @@
 package com.example.Logistics.repository;
 
 import com.example.Logistics.model.LocationsHistory;
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import java.util.List;
 
@@ -14,4 +15,8 @@ public interface LocationsHistoryRepository extends JpaRepository<LocationsHisto
     List<LocationsHistory> findByTripIdOrderByTimestampAsc(Long tripId);
 
     Page<LocationsHistory> findByTripId(Long tripId, Pageable pageable);
+
+
+    @Query("SELECT lh FROM LocationsHistory lh JOIN FETCH lh.trip t LEFT JOIN FETCH t.vehicle v WHERE t.id = :tripId ORDER BY lh.timestamp ASC")
+    List<LocationsHistory> findByTripIdWithVehicle(@Param("tripId") Long tripId);
 }

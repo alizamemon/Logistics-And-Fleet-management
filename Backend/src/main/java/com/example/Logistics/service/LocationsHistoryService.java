@@ -2,8 +2,6 @@ package com.example.Logistics.service;
 
 import com.example.Logistics.model.LocationsHistory;
 import com.example.Logistics.model.Trip;
-import com.example.Logistics.model.Driver;
-import com.example.Logistics.model.Vehicle;
 import com.example.Logistics.model.Shipment;
 import com.example.Logistics.repository.DriverRepository;
 import com.example.Logistics.repository.LocationsHistoryRepository;
@@ -41,11 +39,9 @@ public class LocationsHistoryService {
     @Autowired
     private TripRepository tripRepository;
 
-    // 🎯 INJECT TripService to reuse completeTrip logic safely
     @Autowired
     private TripService tripService;
 
-    // ⚡ Fast In-Memory City Coordinate Dictionary (No External Network Latency / API Rate Limits)
     private static final Map<String, double[]> CITY_COORDINATES_MAP = new HashMap<>();
 
     static {
@@ -95,13 +91,11 @@ public class LocationsHistoryService {
         CITY_COORDINATES_MAP.put("khuzdar", new double[]{27.8164, 66.6057});
     }
 
-    // 1. Create with Dynamic Live Telemetry & Geofence Support
     public LocationsHistory addLocationLog(LocationsHistory log) {
         if (log.getTimestamp() == null) {
             log.setTimestamp(LocalDateTime.now());
         }
 
-        // 🎯 Fetch full Trip entity from DB first so destinationCity, driver, vehicle are fully loaded!
         if (log.getTrip() != null && log.getTrip().getId() != null) {
             Trip dbTrip = tripRepository.findById(log.getTrip().getId()).orElse(null);
             if (dbTrip != null) {
@@ -109,7 +103,6 @@ public class LocationsHistoryService {
             }
         }
 
-        // Set human-readable location text if missing
         if (log.getLocation() == null || log.getLocation().trim().isEmpty()) {
             if (log.getTrip() != null && log.getTrip().getDestinationCity() != null) {
                 log.setLocation("En Route to " + log.getTrip().getDestinationCity());
@@ -118,10 +111,8 @@ public class LocationsHistoryService {
             }
         }
 
-        // Save incoming coordinate log entry
         LocationsHistory savedLog = locationsHistoryRepository.save(log);
 
-        // 🏁 Geofencing Logic Check
         try {
             Trip currentTrip = savedLog.getTrip();
 
@@ -132,7 +123,6 @@ public class LocationsHistoryService {
                 double destinationLat = targetCoordinates[0];
                 double destinationLng = targetCoordinates[1];
 
-                // Precision Threshold (~4-5 km radius window)
                 double threshold = 0.05;
 
                 boolean isNearDestination = Math.abs(savedLog.getLatitude() - destinationLat) < threshold &&
@@ -140,10 +130,8 @@ public class LocationsHistoryService {
 
                 if (isNearDestination && !"COMPLETED".equalsIgnoreCase(currentTrip.getStatus())) {
 
-                    // 💡 Reuse completeTrip logic to automatically trigger Maintenance Check (% 5 trips) & Free Driver/Vehicle
                     tripService.completeTrip(currentTrip.getId());
 
-                    // Update associated active shipments to DELIVERED
                     if (currentTrip.getDriver() != null) {
                         List<Shipment> activeShipments = shipmentRepository.findByDriverIdAndStatus(currentTrip.getDriver().getId(), "ON_GOING");
                         if (activeShipments != null && !activeShipments.isEmpty()) {
@@ -165,18 +153,17 @@ public class LocationsHistoryService {
         return savedLog;
     }
 
-    // 🗺️ Dynamic Helper: Fast In-Memory Lookup
     private double[] getCityCoordinates(String city) {
         if (city == null || city.trim().isEmpty()) {
-            return new double[]{30.6682, 73.1014}; // Default Sahiwal
+            return new double[]{30.6682, 73.1014};
         }
         String cleanCity = city.trim().toLowerCase();
         return CITY_COORDINATES_MAP.getOrDefault(cleanCity, new double[]{30.6682, 73.1014});
     }
 
-    // 2. Read
+    // 🚀 SINGLE UPDATED METHOD: Jo Repository ke FETCH JOIN wale query ko use kar raha hai
     public List<LocationsHistory> getHistoryByTripId(Long tripId) {
-        return locationsHistoryRepository.findByTripIdOrderByTimestampAsc(tripId);
+        return locationsHistoryRepository.findByTripIdWithVehicle(tripId);
     }
 
     public Page<LocationsHistory> getAllHistoryLogsPaged(int page, int size) {
@@ -184,13 +171,11 @@ public class LocationsHistoryService {
         return locationsHistoryRepository.findAll(pageable);
     }
 
-    // 3. Read All
     public List<LocationsHistory> getAllHistoryLogs() {
         return locationsHistoryRepository.findAll();
     }
 
     public Page<LocationsHistory> getFilteredLogsPaged(Long tripId, int page, int size) {
-        // 💡 Always sort by 'id' DESC so new logs appear at top
         Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
 
         if (tripId != null) {
