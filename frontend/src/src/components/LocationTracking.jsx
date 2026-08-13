@@ -211,21 +211,24 @@ const LocationTracking = ({ tripId, sourceCity = "Karachi", destinationCity = ""
                         latest?.vehicle?.blop ||
                         latest?.vehicle?.blob;
 
-                    if (typeof rawBlop === 'string') {
+                    if (typeof rawBlop === 'string' && rawBlop.trim().length > 0) {
                         setVehicleBlop(rawBlop);
                     }
                 }
             }
 
-            if (!vehicleBlop) {
-                try {
-                    const tripRes = await API.get(`/trip/${tripId}`);
-                    const directBlop = tripRes?.data?.vehicle?.blop || tripRes?.data?.vehicle?.blob;
-                    if (typeof directBlop === 'string') setVehicleBlop(directBlop);
-                } catch (e) {
-                    // Fallback
+            // Direct trip fallback call only if vehicleBlop is missing
+            setVehicleBlop((prevBlop) => {
+                if (!prevBlop) {
+                    API.get(`/trip/${tripId}`)
+                        .then((tripRes) => {
+                            const directBlop = tripRes?.data?.vehicle?.blop || tripRes?.data?.vehicle?.blob;
+                            if (typeof directBlop === 'string') setVehicleBlop(directBlop);
+                        })
+                        .catch(() => {});
                 }
-            }
+                return prevBlop;
+            });
 
         } catch (error) {
             console.warn("Location history fetch warning:", error?.message || error);

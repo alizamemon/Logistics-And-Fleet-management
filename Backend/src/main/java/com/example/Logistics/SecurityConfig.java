@@ -74,6 +74,7 @@ public class SecurityConfig {
                 // 2. Role/Authority Specific Endpoints (FIXED HASANYAUTHORITY HERE)
                 .requestMatchers("/api/vehicle/**").hasAnyAuthority("ADMIN", "EMPLOYEE")
                 .requestMatchers("/api/shipments/driver/**").hasAnyAuthority("DRIVER", "EMPLOYEE", "ADMIN", "ROLE_DRIVER", "ROLE_ADMIN")
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/location-history/**", "/api/trip/**").hasAnyAuthority("DRIVER", "EMPLOYEE", "ADMIN", "ROLE_DRIVER", "ROLE_ADMIN", "ROLE_EMPLOYEE", "CUSTOMER")
 
                 .requestMatchers("/actuator/**").permitAll()
                 // 3. Authenticated Endpoints
