@@ -375,8 +375,17 @@ To achieve fault tolerance and multi-AZ resilience, the application is deployed 
 * **Security Group Rules:** Security groups attached to ALB (HTTP 80 open to `0.0.0.0/0`) forward verified traffic to EC2 target instances.
 ---
 
-## 🔗 Live Access
+## 🔗 Live Demo & Deployment Note
 
-🖥️ public IP: http://logistics-alb-1796139297.us-east-1.elb.amazonaws.com
+> ⚠️ **Cloud Hosting Notice:** To keep this portfolio project accessible without incurring ongoing cloud infrastructure costs, the AWS EC2/ALB deployment has been spun down. The application is currently hosted on high-availability free tier platforms (Vercel & Render) for demo purposes.
+
+🖥️ **Live Web Application:** [https://logistics-and-fleet-management-nine.vercel.app](https://logistics-and-fleet-management-nine.vercel.app)  
+🔑 **Direct Login Page:** [https://logistics-and-fleet-management-nine.vercel.app/login](https://logistics-and-fleet-management-nine.vercel.app/login)
+
+#### 🧪 Testing Credentials (Role: ADMIN)
+- **Username:** `super_admin`
+- **Password:** `admin`
+
+*(Note: Free instances automatically sleep after inactivity. If the initial request takes a few seconds to load, please allow up to 30–50 seconds for the backend service to wake up.)*
 
 
