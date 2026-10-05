@@ -379,8 +379,17 @@ To achieve fault tolerance and multi-AZ resilience, the application is deployed 
 
 > ⚠️ **Cloud Hosting Notice:** To keep this portfolio project accessible without incurring ongoing cloud infrastructure costs, the AWS EC2/ALB deployment has been spun down. The application is currently hosted on high-availability free tier platforms (Vercel & Render) for demo purposes.
 
-🖥️ **Live Web Application:** [https://logistics-and-fleet-management-nine.vercel.app](https://logistics-and-fleet-management-nine.vercel.app)  
-🔑 **Direct Login Page:** [https://logistics-and-fleet-management-nine.vercel.app/login](https://logistics-and-fleet-management-nine.vercel.app/login)
+---
+### 🌐 System Endpoints
+
+1. **📦 Public Cargo Tracking Portal (Customer View)**
+   - **URL:** [https://logistics-and-fleet-management-nine.vercel.app](https://logistics-and-fleet-management-nine.vercel.app)
+   - **Description:** Public-facing interface where customers can track live shipment statuses without authentication.
+
+2. **🔐 Operations & Workflow Dashboard (Role-Based Access)**
+   - **URL:** [https://logistics-and-fleet-management-nine.vercel.app/login](https://logistics-and-fleet-management-nine.vercel.app/login)
+   - **Description:** Central portal for full operational management including shipment booking, dynamic driver assignment, vehicle dispatching, fuel logging, and system audits.
+---
 
 #### 🧪 Testing Credentials (Role: ADMIN)
 - **Username:** `super_admin`
