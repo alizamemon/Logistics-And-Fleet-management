@@ -394,6 +394,13 @@ To achieve fault tolerance and multi-AZ resilience, the application is deployed 
 #### 🧪 Testing Credentials (Role: ADMIN)
 - **Username:** `super_admin`
 - **Password:** `admin`
+  
+#### 👥 Testing Other Role-Based Views
+You can view the full list of system users (Dispatchers, Drivers, Customers) directly inside the **User Management / Admin Dashboard**. 
+
+To test role-specific workflows (e.g., Driver trip updates or Customer shipment tracking):
+1. Copy any user's **Username** from the Admin Dashboard list.
+2. Log in using that username with the same default password: **`admin`**
 
 *(Note: Free instances automatically sleep after inactivity. If the initial request takes a few seconds to load, please allow up to 30–50 seconds for the backend service to wake up.)*
 
